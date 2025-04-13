@@ -5,8 +5,6 @@
  */
 
 import * as Blockly from 'blockly';
-import {Navigation} from '../src/navigation';
-import {NavigationController} from '../src/navigation_controller';
 import {getToolboxElement, getFlyoutElement} from '../src/workspace_utilities';
 
 /**
@@ -14,7 +12,7 @@ import {getToolboxElement, getFlyoutElement} from '../src/workspace_utilities';
  */
 export class ScreenReader {
   private workspace: Blockly.WorkspaceSvg;
-  private navigationController: NavigationController | null = null;
+  private lastAnnouncedBlockId: string | null = null;
   
   /**
    * Constructs a new ScreenReader instance.
@@ -22,7 +20,6 @@ export class ScreenReader {
    */
   constructor(workspace: Blockly.WorkspaceSvg) {
     this.workspace = workspace;
-    this.findNavigationController();
     this.initEventListeners();
     
     // Announce that screen reader is active
@@ -30,25 +27,27 @@ export class ScreenReader {
   }
   
   /**
-   * Tries to find the NavigationController instance that's being used.
-   * This is needed to access navigation state information.
-   */
-  private findNavigationController(): void {
-    // Try to find the navigation controller from global context
-    // This is a bit of a hack but we need to access the navigation state
-    const blocks = this.workspace.getAllBlocks(false);
-    for (const block of blocks) {
-      if ((block as any).navigationController) {
-        this.navigationController = (block as any).navigationController;
-        break;
-      }
-    }
-  }
-  
-  /**
-   * Initialize event listeners for various focus events.
+   * Initialize event listeners for workspace changes.
    */
   private initEventListeners(): void {
+    // Add a keyboard event listener to detect Tab key navigation
+    document.addEventListener('keydown', (e) => {
+      // Check if Tab key was pressed
+      if (e.key === 'Tab') {
+        // Give a small delay to let the focus settle
+        setTimeout(() => {
+          // Check what element is now focused
+          const activeElement = document.activeElement;
+          
+          // Check if the toolbox has focus
+          const toolboxElement = getToolboxElement(this.workspace);
+          if (toolboxElement && toolboxElement.contains(activeElement)) {
+            this.speak("Toolbox focused. Use up and down arrows to navigate categories.");
+          }
+        }, 100);
+      }
+    });
+
     // Listen for block selection changes
     this.workspace.addChangeListener((event: Blockly.Events.Abstract) => {
       if (event.type === Blockly.Events.SELECTED) {
@@ -66,7 +65,7 @@ export class ScreenReader {
         if (createEvent.blockId) {
           const block = this.workspace.getBlockById(createEvent.blockId);
           if (block) {
-            this.speak(`Created ${this.getBlockDescription(block)}`);
+            this.speak(`${this.getBlockDescription(block)} added to the workspace`);
           }
         }
       } else if (event.type === Blockly.Events.BLOCK_DELETE) {
@@ -83,41 +82,70 @@ export class ScreenReader {
     });
     
     // Listen for focus changes between major UI components
-    // This detects tab navigation between workspace, toolbox, flyout, etc.
-    
     // Workspace focus
     const workspaceElement = this.workspace.getParentSvg();
     workspaceElement.addEventListener('focus', () => {
       this.speak("Workspace focused. Use arrow keys to navigate blocks.");
     });
     
-    // Toolbox focus
-    const toolboxElement = getToolboxElement(this.workspace);
-    if (toolboxElement) {
-      toolboxElement.addEventListener('focusin', () => {
-        this.speak("Toolbox focused. Use up and down arrows to navigate categories.");
-      });
-      
-      // Also listen for category selection within the toolbox
-      toolboxElement.addEventListener('click', (e) => {
-        const target = e.target as HTMLElement;
-        if (target.classList.contains('blocklyTreeLabel') || 
-            target.classList.contains('blocklyTreeRow')) {
-          const categoryName = target.textContent?.trim() || "Unknown category";
-          this.speak(`Selected category: ${categoryName}`);
-        }
-      });
-    }
-    
     // Flyout focus
     const flyoutElement = getFlyoutElement(this.workspace);
     if (flyoutElement) {
       flyoutElement.addEventListener('focus', () => {
-        this.speak("Flyout focused. Use up and down arrows to navigate blocks.");
+        this.speak("Blocks menu focused. Use up and down arrows to navigate blocks.");
       });
+      
+      // Listen for flyout events
+      const flyout = this.workspace.getFlyout();
+      if (flyout) {
+        const flyoutWorkspace = flyout.getWorkspace();
+        
+        // Check for cursor changes in the flyout workspace
+        setInterval(() => {
+          const cursor = flyoutWorkspace.getCursor();
+          if (cursor) {
+            const curNode = cursor.getCurNode();
+            if (curNode) {
+              const block = curNode.getSourceBlock();
+              if (block) {
+                // Store the last announced block ID to avoid repeating
+                if (!this.lastAnnouncedBlockId || this.lastAnnouncedBlockId !== block.id) {
+                  this.lastAnnouncedBlockId = block.id;
+                  this.speak(`${this.getBlockDescription(block)}`);
+                }
+              }
+            }
+          }
+        }, 500); // Check every 500ms 
+            
+        // Listen for cursor movements in the flyout
+        flyoutWorkspace.addChangeListener((event: Blockly.Events.Abstract) => {
+          // Check for SELECTED events (when a block is selected)
+          if (event.type === Blockly.Events.SELECTED) {
+            const selectedEvent = event as Blockly.Events.Selected;
+            if (selectedEvent.newElementId) {
+              const block = flyoutWorkspace.getBlockById(selectedEvent.newElementId);
+              if (block) {
+                this.speak(`${this.getBlockDescription(block)}`);
+              }
+            }
+          }
+          
+          // Also check for UI events that might indicate block navigation
+          if (event.type === Blockly.Events.UI && 
+              (event as any).element === 'selected' && 
+              (event as any).newValue) {
+            const blockId = (event as any).newValue;
+            const block = flyoutWorkspace.getBlockById(blockId);
+            if (block) {
+              this.speak(`${this.getBlockDescription(block)}`);
+            }
+          }
+        });
+      }
     }
     
-    // Listen for button focus
+    // Listen for button and form element focus
     document.addEventListener('focusin', (e) => {
       const target = e.target as HTMLElement;
       if (target.tagName === 'BUTTON') {
@@ -125,8 +153,46 @@ export class ScreenReader {
       } else if (target.tagName === 'SELECT') {
         const select = target as HTMLSelectElement;
         this.speak(`Dropdown: ${target.id || 'Unknown dropdown'}. Currently selected: ${select.options[select.selectedIndex].text}`);
+      } else if (target.tagName === 'INPUT' && (target as HTMLInputElement).type === 'checkbox') {
+        const checkbox = target as HTMLInputElement;
+        const checkboxLabel = this.findLabelForElement(checkbox);
+        this.speak(`Checkbox: ${checkboxLabel}. ${checkbox.checked ? 'Checked' : 'Not checked'}`);
       }
     });
+    
+    // Listen specifically for the "Disable stack connections" checkbox
+    const noStackCheckbox = document.getElementById('noStack');
+    if (noStackCheckbox) {
+      noStackCheckbox.addEventListener('change', (e) => {
+        const checkbox = e.target as HTMLInputElement;
+        this.speak(`Disable stack connections: ${checkbox.checked ? 'Checked' : 'Unchecked'}`);
+      });
+    }
+  }
+  
+  /**
+   * Find the label text for a form element
+   */
+  private findLabelForElement(element: HTMLElement): string {
+    // Try to find a label with a matching 'for' attribute
+    if (element.id) {
+      const label = document.querySelector(`label[for="${element.id}"]`);
+      if (label && label.textContent) {
+        return label.textContent.trim();
+      }
+    }
+    
+    // Try to find a parent label element
+    let parent = element.parentElement;
+    while (parent) {
+      if (parent.tagName === 'LABEL' && parent.textContent) {
+        return parent.textContent.trim();
+      }
+      parent = parent.parentElement;
+    }
+    
+    // Fallback to the element's id or a generic description
+    return element.id || "Unnamed element";
   }
   
   /**
