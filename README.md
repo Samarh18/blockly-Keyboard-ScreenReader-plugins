@@ -1,1 +1,1 @@
-# blockly-keyboard-accessibility
+# blockly-accessibility-demo
