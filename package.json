@@ -1,0 +1,88 @@
+{
+  "name": "@blockly/keyboard-experiment",
+  "version": "0.0.6",
+  "description": "A plugin for keyboard navigation.",
+  "scripts": {
+    "audit:fix": "blockly-scripts auditFix",
+    "build": "blockly-scripts build",
+    "ghpages": "webpack",
+    "clean": "blockly-scripts clean",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "predeploy": "blockly-scripts predeploy",
+    "prepublishOnly": "npm login --registry https://wombat-dressing-room.appspot.com",
+    "start": "blockly-scripts start",
+    "test": "npm run wdio:clean && npm run wdio:build && npm run wdio:run",
+    "wdio:build": "npm run wdio:build:app && npm run wdio:build:tests",
+    "wdio:build:app": "cd test/webdriverio && webpack",
+    "wdio:build:tests": "tsc -p ./test/webdriverio/test/tsconfig.json",
+    "wdio:clean": "cd test/webdriverio/test && rm -rf dist",
+    "wdio:run": "npm run wdio:build && cd test/webdriverio/test && npx mocha dist"
+  },
+  "main": "./dist/index.js",
+  "module": "./src/index.js",
+  "unpkg": "./dist/index.js",
+  "author": "Blockly Team",
+  "keywords": [
+    "blockly",
+    "blockly-plugin",
+    "keyboard-experiment"
+  ],
+  "homepage": "https://github.com/google/blockly-keyboard-experimentation#readme",
+  "bugs": {
+    "url": "https://github.com/google/blockly-keyboard-experimentation/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/google/blockly-keyboard-experimentation.git"
+  },
+  "license": "Apache-2.0",
+  "directories": {
+    "dist": "dist",
+    "src": "src"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "devDependencies": {
+    "@blockly/dev-scripts": "^4.0.1",
+    "@blockly/field-colour": "^5.0.7",
+    "@eslint/eslintrc": "^2.1.2",
+    "@eslint/js": "^8.49.0",
+    "@types/chai": "^5.2.1",
+    "@types/mocha": "^10.0.10",
+    "@types/p5": "^1.7.6",
+    "@typescript-eslint/eslint-plugin": "^6.7.2",
+    "@typescript-eslint/parser": "^6.7.2",
+    "blockly": "12.0.0-beta.3",
+    "chai": "^5.2.0",
+    "eslint": "^8.49.0",
+    "eslint-config-google": "^0.14.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-plugin-jsdoc": "^46.8.2",
+    "globals": "^15.4.0",
+    "html-webpack-plugin": "^5.6.0",
+    "mocha": "^11.1.0",
+    "p5": "^1.10.0",
+    "prettier": "^3.3.1",
+    "ts-loader": "^9.5.1",
+    "typescript": "^5.4.5",
+    "webdriverio": "^9.12.1"
+  },
+  "peerDependencies": {
+    "blockly": "^12.0.0-beta.3"
+  },
+  "overrides": {
+    "@blockly/field-colour": {
+      "blockly": "^12.0.0-beta.3"
+    }
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://wombat-dressing-room.appspot.com"
+  },
+  "eslintConfig": {
+    "extends": "@blockly/eslint-config"
+  }
+}
