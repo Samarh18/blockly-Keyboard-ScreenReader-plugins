@@ -35,7 +35,7 @@ function getOptions() {
   const params = new URLSearchParams(window.location.search);
 
   const scenarioParam = params.get('scenario');
-  const scenario = scenarioParam ?? 'simpleCircle';
+  const scenario = scenarioParam ?? 'blank';
 
   const rendererParam = params.get('renderer');
   let renderer = 'zelos';
@@ -53,7 +53,7 @@ function getOptions() {
   const stackConnections = !noStackParam;
 
   const toolboxParam = params.get('toolbox');
-  const toolbox = toolboxParam ?? 'toolbox';
+  const toolbox = toolboxParam ?? 'flyout';
   const toolboxObject =
     toolbox === 'flyout' ? toolboxFlyout : toolboxCategories;
 

@@ -81,3 +81,4 @@ const keyboardNav = new KeyboardNavigation(workspace);
 ## Contributing
 
 To learn more about contributing to this project, see the [contributing page](https://github.com/google/blockly-keyboard-experimentation/blob/main/CONTRIBUTING.md).
+# blockly-accessibility-demo
