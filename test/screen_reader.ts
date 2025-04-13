@@ -5,12 +5,16 @@
  */
 
 import * as Blockly from 'blockly';
+import {Navigation} from '../src/navigation';
+import {NavigationController} from '../src/navigation_controller';
+import {getToolboxElement, getFlyoutElement} from '../src/workspace_utilities';
 
 /**
  * A simple screen reader implementation for Blockly that announces actions.
  */
 export class ScreenReader {
   private workspace: Blockly.WorkspaceSvg;
+  private navigationController: NavigationController | null = null;
   
   /**
    * Constructs a new ScreenReader instance.
@@ -18,6 +22,7 @@ export class ScreenReader {
    */
   constructor(workspace: Blockly.WorkspaceSvg) {
     this.workspace = workspace;
+    this.findNavigationController();
     this.initEventListeners();
     
     // Announce that screen reader is active
@@ -25,7 +30,23 @@ export class ScreenReader {
   }
   
   /**
-   * Initialize event listeners for workspace changes.
+   * Tries to find the NavigationController instance that's being used.
+   * This is needed to access navigation state information.
+   */
+  private findNavigationController(): void {
+    // Try to find the navigation controller from global context
+    // This is a bit of a hack but we need to access the navigation state
+    const blocks = this.workspace.getAllBlocks(false);
+    for (const block of blocks) {
+      if ((block as any).navigationController) {
+        this.navigationController = (block as any).navigationController;
+        break;
+      }
+    }
+  }
+  
+  /**
+   * Initialize event listeners for various focus events.
    */
   private initEventListeners(): void {
     // Listen for block selection changes
@@ -45,7 +66,7 @@ export class ScreenReader {
         if (createEvent.blockId) {
           const block = this.workspace.getBlockById(createEvent.blockId);
           if (block) {
-            this.speak(`${this.getBlockDescription(block)} added to the workspace`);
+            this.speak(`Created ${this.getBlockDescription(block)}`);
           }
         }
       } else if (event.type === Blockly.Events.BLOCK_DELETE) {
@@ -58,6 +79,52 @@ export class ScreenReader {
             this.speak(`Changed ${this.getBlockDescription(block)}`);
           }
         }
+      }
+    });
+    
+    // Listen for focus changes between major UI components
+    // This detects tab navigation between workspace, toolbox, flyout, etc.
+    
+    // Workspace focus
+    const workspaceElement = this.workspace.getParentSvg();
+    workspaceElement.addEventListener('focus', () => {
+      this.speak("Workspace focused. Use arrow keys to navigate blocks.");
+    });
+    
+    // Toolbox focus
+    const toolboxElement = getToolboxElement(this.workspace);
+    if (toolboxElement) {
+      toolboxElement.addEventListener('focusin', () => {
+        this.speak("Toolbox focused. Use up and down arrows to navigate categories.");
+      });
+      
+      // Also listen for category selection within the toolbox
+      toolboxElement.addEventListener('click', (e) => {
+        const target = e.target as HTMLElement;
+        if (target.classList.contains('blocklyTreeLabel') || 
+            target.classList.contains('blocklyTreeRow')) {
+          const categoryName = target.textContent?.trim() || "Unknown category";
+          this.speak(`Selected category: ${categoryName}`);
+        }
+      });
+    }
+    
+    // Flyout focus
+    const flyoutElement = getFlyoutElement(this.workspace);
+    if (flyoutElement) {
+      flyoutElement.addEventListener('focus', () => {
+        this.speak("Flyout focused. Use up and down arrows to navigate blocks.");
+      });
+    }
+    
+    // Listen for button focus
+    document.addEventListener('focusin', (e) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'BUTTON') {
+        this.speak(`Button: ${target.textContent || target.id || 'Unknown button'}`);
+      } else if (target.tagName === 'SELECT') {
+        const select = target as HTMLSelectElement;
+        this.speak(`Dropdown: ${target.id || 'Unknown dropdown'}. Currently selected: ${select.options[select.selectedIndex].text}`);
       }
     });
   }
@@ -92,11 +159,7 @@ export class ScreenReader {
     } else if (blockType === 'math_number') {
       const value = block.getFieldValue('NUM');
       return `Number block with value ${value}`;
-    } else if (blockType === 'text_print') {
-      return "Print text block";
-    } 
-    // New and enhanced descriptions
-    else if (blockType === 'draw_emoji') {
+    } else if (blockType === 'draw_emoji') {
       const emoji = block.getFieldValue('emoji');
       let emojiName = "emoji";
       if (emoji === '❤️') emojiName = "heart";
@@ -246,8 +309,8 @@ export class ScreenReader {
   }
   
   /**
-   * Speak a message out loud using the browser's speech synthesis.
-   * @param message The message to speak.
+   * Speak a message using browser's speech synthesis.
+   * @param message The message to announce.
    */
   private speak(message: string): void {
     // Log to console for debugging
@@ -255,7 +318,13 @@ export class ScreenReader {
     
     // Use the Web Speech API
     if ('speechSynthesis' in window) {
+      // Cancel any previous speech to prevent queuing up announcements
+      window.speechSynthesis.cancel();
+      
       const utterance = new SpeechSynthesisUtterance(message);
+      // Set properties for better screen reader experience
+      utterance.rate = 1.2; // Slightly faster than default
+      utterance.pitch = 1.0; // Normal pitch
       window.speechSynthesis.speak(utterance);
     }
   }
