@@ -21,8 +21,8 @@ import type {
 } from 'blockly/core';
 
 import * as Constants from '../constants';
-import type {Navigation} from '../navigation';
-import {Mover} from './mover';
+import type { Navigation } from '../navigation';
+import { Mover } from './mover';
 
 const KeyCodes = BlocklyUtils.KeyCodes;
 
@@ -33,7 +33,7 @@ export class EnterAction {
   constructor(
     private mover: Mover,
     private navigation: Navigation,
-  ) {}
+  ) { }
 
   /**
    * Adds the enter action shortcut to the registry.
@@ -153,7 +153,7 @@ export class EnterAction {
     this.navigation.focusWorkspace(workspace);
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     workspace.getCursor()?.setCurNode(ASTNode.createBlockNode(newBlock)!);
-    this.mover.startMove(workspace);
+    //this.mover.startMove(workspace);
   }
 
   /**
@@ -184,7 +184,7 @@ export class EnterAction {
     const workspaceWidth =
       workspace.getParentSvg().clientWidth - (toolboxWidth ?? 0);
     const workspaceHeight = workspace.getParentSvg().clientHeight;
-    const {height: newBlockHeight, width: newBlockWidth} =
+    const { height: newBlockHeight, width: newBlockWidth } =
       newBlock.getHeightWidth();
 
     const getNextIntersectingBlock = function (
@@ -298,7 +298,7 @@ export class EnterAction {
     if (!flyout || !flyout.isVisible()) {
       console.warn(
         'Trying to insert from the flyout when the flyout does not ' +
-          ' exist or is not visible',
+        ' exist or is not visible',
       );
       return null;
     }
