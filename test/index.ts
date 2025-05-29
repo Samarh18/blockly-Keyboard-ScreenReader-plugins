@@ -7,22 +7,22 @@
 import * as Blockly from 'blockly';
 // Import the default blocks.
 import 'blockly/blocks';
-import {installAllBlocks as installColourBlocks} from '@blockly/field-colour';
-import {KeyboardNavigation} from '../src/index';
+import { installAllBlocks as installColourBlocks } from '@blockly/field-colour';
+import { KeyboardNavigation } from '../src/index';
 // @ts-expect-error No types in js file
-import {forBlock} from './blocks/p5_generators';
+import { forBlock } from './blocks/p5_generators';
 // @ts-expect-error No types in js file
-import {blocks} from './blocks/p5_blocks';
+import { blocks } from './blocks/p5_blocks';
 // @ts-expect-error No types in js file
-import {toolbox as toolboxFlyout} from './blocks/toolbox.js';
+import { toolbox as toolboxFlyout } from './blocks/toolbox.js';
 // @ts-expect-error No types in js file
 import toolboxCategories from './toolboxCategories.js';
 
-import {javascriptGenerator} from 'blockly/javascript';
+import { javascriptGenerator } from 'blockly/javascript';
 // @ts-expect-error No types in js file
-import {load} from './loadTestBlocks';
-import {runCode, registerRunCodeShortcut} from './runCode';
-import {ScreenReader} from './screen_reader'; // Add this import
+import { load } from './loadTestBlocks';
+import { runCode, registerRunCodeShortcut } from './runCode';
+import { ScreenReader } from './screen_reader'; // Add this import
 
 
 /**
@@ -85,7 +85,7 @@ function getOptions() {
  * @returns The created workspace.
  */
 function createWorkspace(): Blockly.WorkspaceSvg {
-  const {scenario, stackConnections, renderer, toolbox} = getOptions();
+  const { scenario, stackConnections, renderer, toolbox } = getOptions();
 
   const injectOptions = {
     toolbox,
@@ -98,13 +98,13 @@ function createWorkspace(): Blockly.WorkspaceSvg {
   const workspace = Blockly.inject(blocklyDiv, injectOptions);
 
   const navigationOptions = {
-    cursor: {stackConnections},
+    cursor: { stackConnections },
   };
   new KeyboardNavigation(workspace, navigationOptions);
   registerRunCodeShortcut();
 
-    // Initialize screen reader
-    new ScreenReader(workspace);
+  // Initialize screen reader
+  new ScreenReader(workspace);
 
   // Disable blocks that aren't inside the setup or draw loops.
   //workspace.addChangeListener(Blockly.Events.disableOrphans);
