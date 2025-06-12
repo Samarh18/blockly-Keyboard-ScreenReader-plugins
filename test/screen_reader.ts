@@ -6,7 +6,7 @@
 
 import * as Blockly from 'blockly';
 import { getToolboxElement, getFlyoutElement } from '../src/workspace_utilities';
-
+import { getBlockMessage } from './block_descriptions';
 /**
  * A simple screen reader implementation for Blockly that announces actions.
  */
@@ -15,7 +15,6 @@ export class ScreenReader {
   private lastAnnouncedBlockId: string | null = null;
   private cursorInterval: number | null = null;
   private lastWorkspaceNodeId: string | null = null;
-  private speechQueue: string[] = [];
   private isSpeaking: boolean = false;
   private debugMode: boolean = true; // Enable debug logging
 
@@ -26,6 +25,8 @@ export class ScreenReader {
   private pendingMessage: string | null = null;
   private interruptionTimer: number | null = null;
   private hasLeftWorkspace: boolean = false;
+
+  private currentDropdownField: Blockly.Field | null = null;
 
 
   /**
@@ -44,18 +45,9 @@ export class ScreenReader {
 
     // Setup workspace cursor listener
     this.setupWorkspaceCursorListener();
-
-    // Setup Blockly-specific field listeners
-    this.setupBlocklyFieldListeners();
-
-    this.setupColorPickerListeners();
-
-
-    // // Announce that screen reader is ready
-    // setTimeout(() => {
-    //   this.speak('Screen reader enabled. Press Tab to navigate between controls. Use arrow keys within menus.');
-    // }, 500);
   }
+
+
   /**
    * Initialize speech synthesis with proper voice loading
    */
@@ -77,47 +69,13 @@ export class ScreenReader {
     }
   }
 
-
-
   /**
    * Test speech after voices are loaded
    */
   private testSpeechAfterVoicesLoaded(): void {
-    // Test speech once voices are definitely loaded
     setTimeout(() => {
       this.speak('Screen reader enabled. Press Tab to navigate between controls. Use arrow keys within menus.');
     }, 100);
-  }
-
-  /**
-   * Test if speech synthesis is working
-   */
-  private testSpeechSynthesis(): void {
-    this.debugLog('Testing speech synthesis...');
-
-    if (!('speechSynthesis' in window)) {
-      this.debugLog('ERROR: speechSynthesis not available in this browser');
-      return;
-    }
-
-    this.debugLog('speechSynthesis is available');
-
-    // Test basic speech
-    try {
-      const testUtterance = new SpeechSynthesisUtterance('Screen reader test');
-      testUtterance.rate = 1.7;
-      testUtterance.pitch = 1.0;
-      testUtterance.volume = 1.0;
-
-      testUtterance.onstart = () => this.debugLog('Test speech started successfully');
-      testUtterance.onend = () => this.debugLog('Test speech ended successfully');
-      testUtterance.onerror = (event) => this.debugLog(`Test speech error: ${event.error}`);
-
-      window.speechSynthesis.speak(testUtterance);
-      this.debugLog('Test speech initiated');
-    } catch (error) {
-      this.debugLog(`ERROR: Failed to create test utterance: ${error}`);
-    }
   }
 
   /**
@@ -132,9 +90,6 @@ export class ScreenReader {
   private setupDropdownNavigation(): void {
     this.debugLog('Setting up dropdown navigation listeners...');
 
-
-
-    // Generic handler for all select elements
     // Generic handler for all select elements
     const handleSelectNavigation = (select: HTMLSelectElement) => {
       // Mark as handled to prevent duplicate announcements
@@ -160,35 +115,6 @@ export class ScreenReader {
       });
     };
 
-    // Setup for emoji dropdown (if it exists in the workspace)
-    const emojiDropdown = document.querySelector('select#emoji') as HTMLSelectElement;
-    if (emojiDropdown) {
-      this.debugLog('Found emoji dropdown');
-
-      // Custom handling for emoji dropdown to announce emoji names
-      emojiDropdown.addEventListener('focus', () => {
-        const currentEmoji = emojiDropdown.value;
-        const emojiName = this.getEmojiName(currentEmoji);
-        this.speak(`Emoji dropdown. Currently selected: ${emojiName}. Use arrow keys to navigate options.`);
-      });
-
-      emojiDropdown.addEventListener('keydown', (e) => {
-        setTimeout(() => {
-          if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-            const selectedEmoji = emojiDropdown.value;
-            const emojiName = this.getEmojiName(selectedEmoji);
-            this.speak(emojiName);
-          }
-        }, 10);
-      });
-
-      emojiDropdown.addEventListener('change', () => {
-        const selectedEmoji = emojiDropdown.value;
-        const emojiName = this.getEmojiName(selectedEmoji);
-        this.speak(`Emoji changed to ${emojiName}`);
-      });
-    }
-
     // Setup for scenario dropdown
     const scenarioDropdown = document.getElementById('scenario') as HTMLSelectElement;
     if (scenarioDropdown) {
@@ -209,42 +135,6 @@ export class ScreenReader {
       this.debugLog('Found renderer dropdown');
       handleSelectNavigation(rendererDropdown);
     }
-
-    // Also handle any dropdowns that might be dynamically created in the workspace
-    this.workspace.addChangeListener((event: Blockly.Events.Abstract) => {
-      if (event.type === Blockly.Events.UI && (event as any).element === 'field') {
-        // A field editor might have opened
-        setTimeout(() => {
-          const activeDropdown = document.querySelector('select:focus') as HTMLSelectElement;
-          if (activeDropdown && !activeDropdown.hasAttribute('data-screen-reader-setup')) {
-            activeDropdown.setAttribute('data-screen-reader-setup', 'true');
-            this.debugLog('Setting up dynamically created dropdown');
-            handleSelectNavigation(activeDropdown);
-          }
-        }, 100);
-      }
-
-      if (event.type === Blockly.Events.UI) {
-        // Cast to any first to access properties, since Blockly.Events.UI might not have full typing
-        const uiEvent = event as any;
-        if (uiEvent.element === 'click' || uiEvent.element === 'field') {
-          this.debugLog('UI event detected, checking for color picker');
-
-          // Check for color picker with a delay
-          setTimeout(() => {
-            const dropdownDiv = document.querySelector('.blocklyDropDownDiv:not([style*="display: none"])') as HTMLElement;
-            if (dropdownDiv) {
-              this.detectAndHandleColorPicker(dropdownDiv);
-            }
-
-            const widgetDiv = document.querySelector('.blocklyWidgetDiv:not([style*="display: none"])') as HTMLElement;
-            if (widgetDiv) {
-              this.detectAndHandleColorPicker(widgetDiv);
-            }
-          }, 200);
-        }
-      }
-    });
   }
 
   // Helper method to get friendly names for emojis
@@ -263,6 +153,118 @@ export class ScreenReader {
     };
 
     return emojiMap[emoji] || `emoji ${emoji}`;
+  }
+
+  /**
+ * Set up listeners for Blockly dropdown menus
+ */
+  private setupBlocklyDropdownListeners(): void {
+    this.debugLog('Setting up Blockly dropdown listeners...');
+
+    // Track state to prevent duplicate announcements
+    let dropdownMonitorInterval: number | null = null;
+    let lastHighlightedText: string = '';
+    let isDropdownOpen: boolean = false;
+    let hasAnnouncedOpen: boolean = false;
+
+    // Function to check for dropdown and highlighted items
+    const checkForDropdown = () => {
+      const dropdownDiv = document.querySelector('.blocklyDropDownDiv') as HTMLElement;
+
+      if (dropdownDiv && dropdownDiv.style.display !== 'none') {
+        if (!isDropdownOpen) {
+          // Dropdown just opened
+          isDropdownOpen = true;
+          hasAnnouncedOpen = false;
+          lastHighlightedText = ''; // Reset to ensure first item is announced
+        }
+
+        // Announce opening only once
+        if (!hasAnnouncedOpen) {
+          hasAnnouncedOpen = true;
+          try {
+            const owner = Blockly.DropDownDiv.getOwner() as Blockly.Field;
+            if (owner) {
+              this.currentDropdownField = owner;
+              const currentValue = owner.getText();
+              this.speak(`Dropdown opened. Current value: ${currentValue}. Use arrow keys to navigate.`);
+            }
+          } catch (e) {
+            this.debugLog('Could not get dropdown owner');
+          }
+        }
+
+        // Look for highlighted menu item
+        const highlightedItem = dropdownDiv.querySelector('.blocklyMenuItemHighlight');
+        if (highlightedItem) {
+          const text = highlightedItem.textContent?.trim() || '';
+          // Only announce if it's different from the last one
+          if (text && text !== lastHighlightedText) {
+            lastHighlightedText = text;
+            // Small delay to prevent interrupting the opening announcement
+            setTimeout(() => {
+              this.speak(text);
+            }, hasAnnouncedOpen ? 0 : 100);
+          }
+        }
+      } else if (isDropdownOpen) {
+        // Dropdown just closed
+        isDropdownOpen = false;
+        hasAnnouncedOpen = false;
+        lastHighlightedText = '';
+        this.currentDropdownField = null;
+
+        // Clear the monitoring interval
+        if (dropdownMonitorInterval) {
+          clearInterval(dropdownMonitorInterval);
+          dropdownMonitorInterval = null;
+        }
+      }
+    };
+
+    // Single event listener for keydown
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !dropdownMonitorInterval) {
+        // Check if we're on a dropdown field
+        const cursor = this.workspace.getCursor();
+        if (cursor) {
+          const curNode = cursor.getCurNode();
+          if (curNode && curNode.getType() === Blockly.ASTNode.types.FIELD) {
+            const field = curNode.getLocation() as Blockly.Field;
+            if (field instanceof Blockly.FieldDropdown) {
+              // Start monitoring only once
+              dropdownMonitorInterval = window.setInterval(checkForDropdown, 50);
+
+              // Stop after 10 seconds
+              setTimeout(() => {
+                if (dropdownMonitorInterval) {
+                  clearInterval(dropdownMonitorInterval);
+                  dropdownMonitorInterval = null;
+                }
+              }, 10000);
+            }
+          }
+        }
+      }
+    });
+
+    // Also start monitoring on mousedown (but not multiple times)
+    document.addEventListener('mousedown', (e) => {
+      const target = e.target as HTMLElement;
+      // Check if clicking on a dropdown field
+      if (target.closest('.blocklyEditableText') || target.closest('.blocklyDropdownDiv')) {
+        if (!dropdownMonitorInterval) {
+          dropdownMonitorInterval = window.setInterval(checkForDropdown, 50);
+
+          setTimeout(() => {
+            if (dropdownMonitorInterval) {
+              clearInterval(dropdownMonitorInterval);
+              dropdownMonitorInterval = null;
+            }
+          }, 10000);
+        }
+      }
+    });
   }
 
 
@@ -293,11 +295,14 @@ export class ScreenReader {
 
           // Check if the toolbox has focus
           const toolboxElement = getToolboxElement(this.workspace);
-          if (toolboxElement && toolboxElement.contains(activeElement)) {
-            this.speak("Toolbox focused.");
-          }
+          // if (toolboxElement && toolboxElement.contains(activeElement)) {
+          //   this.speak("Toolbox focused.");
+          // }
         }, 100);
       }
+
+      this.setupBlocklyDropdownListeners();
+
     });
 
     this.setupDropdownNavigation();
@@ -333,33 +338,14 @@ export class ScreenReader {
         if (changeEvent.blockId) {
           const block = this.workspace.getBlockById(changeEvent.blockId);
           if (block) {
-            this.speak(`Changed ${this.getBlockDescription(block)}`);
+            this.speak(`Block changed to ${this.getBlockDescription(block)}`);
           }
         }
       }
     });
 
-    // Listen for focus changes between major UI components
-    // Workspace focus
-    const workspaceElement = this.workspace.getParentSvg();
-    workspaceElement.addEventListener('focus', () => {
-      this.debugLog('Workspace focused');
 
-      // Always announce workspace focus
-      this.speak("Workspace focused. Use arrow keys to navigate blocks.");
 
-      // If we're coming back to the workspace after leaving, reset the last node ID
-      if (this.hasLeftWorkspace) {
-        this.lastWorkspaceNodeId = null;
-        this.hasLeftWorkspace = false;
-        this.debugLog('Reset lastWorkspaceNodeId because returning to workspace');
-      }
-    });
-
-    workspaceElement.addEventListener('blur', () => {
-      this.debugLog('Workspace blurred');
-      this.hasLeftWorkspace = true;
-    });
 
     // Flyout focus
     const flyoutElement = getFlyoutElement(this.workspace);
@@ -396,40 +382,12 @@ export class ScreenReader {
             }
           }
         }, 500); // Check every 500ms 
-
-        // Listen for cursor movements in the flyout
-        flyoutWorkspace.addChangeListener((event: Blockly.Events.Abstract) => {
-          // Check for SELECTED events (when a block is selected)
-          if (event.type === Blockly.Events.SELECTED) {
-            const selectedEvent = event as Blockly.Events.Selected;
-            if (selectedEvent.newElementId) {
-              const block = flyoutWorkspace.getBlockById(selectedEvent.newElementId);
-              if (block) {
-                this.speak(`${this.getBlockDescription(block)}`);
-              }
-            }
-          }
-
-          // Also check for UI events that might indicate block navigation
-          if (event.type === Blockly.Events.UI &&
-            (event as any).element === 'selected' &&
-            (event as any).newValue) {
-            const blockId = (event as any).newValue;
-            const block = flyoutWorkspace.getBlockById(blockId);
-            if (block) {
-              this.speak(`${this.getBlockDescription(block)}`);
-            }
-          }
-        });
       }
     }
 
     /**
  * Improved focus event handling for better form control announcements
- * Replace the existing focusin event listener in screen_reader.ts
  */
-
-    // 4. Update the focusin event listener to skip already-handled dropdowns
     document.addEventListener('focusin', (e) => {
       const target = e.target as HTMLElement;
       this.debugLog(`Focus changed to: ${target.tagName} ${target.id || target.className || 'unnamed'}`);
@@ -438,6 +396,33 @@ export class ScreenReader {
       if (target.hasAttribute('data-dropdown-handled') ||
         target.hasAttribute('data-screen-reader-handled')) {
         return;
+      }
+
+      // Handle toolbox category group FIRST, before other cases
+      if (target.classList.contains('blocklyToolboxCategoryGroup') &&
+        target.getAttribute('role') === 'tree') {
+        // Find the currently selected category
+        const selectedItem = target.querySelector('[aria-selected="true"]');
+        const categoryName = selectedItem?.textContent?.trim() || 'first category';
+        this.speak(`Toolbox categories. ${categoryName} selected. Use arrow keys to navigate.`);
+
+        // Set up arrow key navigation for this specific element
+        if (!target.hasAttribute('data-arrow-handler')) {
+          target.setAttribute('data-arrow-handler', 'true');
+          target.addEventListener('keydown', (event) => {
+            const ke = event as KeyboardEvent;
+            if (ke.key === 'ArrowUp' || ke.key === 'ArrowDown') {
+              setTimeout(() => {
+                const newSelected = target.querySelector('[aria-selected="true"]');
+                if (newSelected) {
+                  this.speak(newSelected.textContent?.trim() || 'Unknown category');
+                }
+              }, 50);
+            }
+          });
+        }
+
+        return; // Skip the default case
       }
 
       // Handle different types of form controls
@@ -500,9 +485,9 @@ export class ScreenReader {
           const role = target.getAttribute('role');
           const ariaLabel = target.getAttribute('aria-label');
 
-          if (role || ariaLabel) {
-            this.speak(`${role || 'Element'}: ${ariaLabel || 'Interactive element'}`);
-          }
+          // if (role || ariaLabel) {
+          //   this.speak(`${role || 'Element'}: ${ariaLabel || 'Interactive element'}`);
+          // }
           // Don't announce every div focus, only meaningful ones
           break;
       }
@@ -621,163 +606,33 @@ export class ScreenReader {
    */
   public announceBlock(block: Blockly.Block): void {
     const description = this.getBlockDescription(block);
-    // Use high priority for block selection announcements too
     this.speakHighPriority(`Selected ${description}`);
   }
 
-
-  /**
-   * Support for Blockly dropdown fields within blocks
-   * Add this to the screen_reader.ts file
-   */
-
-  // Update the setupBlocklyFieldListeners method to better detect color pickers
-  private setupBlocklyFieldListeners(): void {
-    this.debugLog('Setting up Blockly field listeners...');
-
-    // Listen for when Blockly dropdown divs are shown
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        if (mutation.type === 'childList') {
-          mutation.addedNodes.forEach((node) => {
-            if (node instanceof HTMLElement) {
-              // Check if it's a Blockly dropdown menu
-              if (node.classList.contains('blocklyDropdownMenu') ||
-                node.querySelector('.blocklyDropdownMenu')) {
-                this.handleBlocklyDropdownMenu(node);
-              }
-
-              // Check if it's a Blockly widget div with dropdown
-              if (node.classList.contains('blocklyWidgetDiv') &&
-                node.querySelector('select')) {
-                const select = node.querySelector('select') as HTMLSelectElement;
-                this.handleBlocklyDropdownSelect(select);
-              }
-
-              // Check for color picker elements - look for any dropdown div
-              if (node.classList.contains('blocklyDropDownDiv') ||
-                node.classList.contains('blocklyWidgetDiv')) {
-                // Use a slight delay to ensure the color picker is fully rendered
-                setTimeout(() => {
-                  this.detectAndHandleColorPicker(node);
-                }, 100);
-              }
-            }
-          });
-        }
-      });
-    });
-
-    // Observe the body for dropdown additions
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true
-    });
-  }
-
-  // New method to detect color picker more reliably
-  private detectAndHandleColorPicker(element: HTMLElement): void {
-    this.debugLog('Detecting color picker in element');
-
-    // Look for color cells with various possible selectors
-    const colorCells = element.querySelectorAll(
-      '[role="button"][style*="background-color"], ' +
-      '[role="button"][style*="background"], ' +
-      '.blocklyColourCell, ' +
-      '[class*="colour"][role="button"], ' +
-      '[class*="color"][role="button"]'
-    );
-
-    if (colorCells.length > 0) {
-      this.debugLog(`Found color picker with ${colorCells.length} color cells`);
-      this.handleColorPicker(element);
-    }
-  }
-
-  // Handle Blockly dropdown menus (div-based dropdowns)
-  private handleBlocklyDropdownMenu(menuElement: HTMLElement): void {
-    this.debugLog('Blockly dropdown menu detected');
-
-    const menuItems = menuElement.querySelectorAll('.blocklyMenuItem');
-    if (menuItems.length > 0) {
-      this.speak(`Dropdown menu opened with ${menuItems.length} options. Use arrow keys to navigate.`);
-
-      // Add keyboard navigation announcements
-      menuElement.addEventListener('keydown', (e) => {
-        if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-          setTimeout(() => {
-            const focusedItem = menuElement.querySelector('.blocklyMenuItemHighlight');
-            if (focusedItem) {
-              const itemText = focusedItem.textContent?.trim() || 'Unknown option';
-              this.speak(itemText);
-            }
-          }, 10);
-        }
-      });
-    }
-  }
-
-  // Handle Blockly select dropdowns
-  private handleBlocklyDropdownSelect(select: HTMLSelectElement): void {
-    if (select.hasAttribute('data-screen-reader-handled')) {
-      return; // Already set up
-    }
-
-    select.setAttribute('data-screen-reader-handled', 'true');
-    this.debugLog('Setting up Blockly select dropdown');
-
-    // Get the field name from the block
-    const fieldName = this.getFieldNameFromDropdown(select);
-
-    select.addEventListener('focus', () => {
-      const currentValue = select.options[select.selectedIndex]?.text || 'No selection';
-      this.speak(`${fieldName} dropdown. Currently: ${currentValue}. Use arrow keys to change.`);
-    });
-
-    select.addEventListener('keydown', (e) => {
-      if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-        setTimeout(() => {
-          const newValue = select.options[select.selectedIndex]?.text;
-          if (newValue) {
-            this.speak(newValue);
-          }
-        }, 10);
-      }
-    });
-  }
-
-  // Helper to get field name from context
-  private getFieldNameFromDropdown(element: HTMLElement): string {
-    // Try to determine what kind of dropdown this is
-    const widgetDiv = element.closest('.blocklyWidgetDiv');
-    if (widgetDiv) {
-      // Check if we can determine the field type from classes or data attributes
-      const classList = element.className;
-
-      if (classList.includes('emoji')) return 'Emoji';
-      if (classList.includes('colour') || classList.includes('color')) return 'Color';
-      if (classList.includes('angle')) return 'Angle';
-      if (classList.includes('variable')) return 'Variable';
-
-      // Try to get from aria-label
-      const ariaLabel = element.getAttribute('aria-label');
-      if (ariaLabel) return ariaLabel;
-    }
-
-    return 'Field';
-  }
-
-  /**
-   * Get a human-readable description of a block.
-   * @param block The block to describe.
-   * @returns A description string.
-   */
   /**
  * Enhanced getBlockDescription method to include field values
- * Replace the existing getBlockDescription method in screen_reader.ts
  */
   private getBlockDescription(block: Blockly.Block): string {
-    // Get the type of the block
+    // Get variables from workspace for context
+    const workspace = block.workspace;
+    const variableMap = workspace.getVariableMap();
+    const allVariables = variableMap.getAllVariables();
+
+    // Map variables with the correct method
+    const variables = allVariables.map(variable => ({
+      name: variable.getName(),  // Use getName() method
+      id: variable.getId()
+    }));
+
+    // Try to get description from block_descriptions
+    const detailedDescription = getBlockMessage(block, variables);
+
+    // If we got a meaningful description, use it
+    if (!detailedDescription.startsWith('Block of type')) {
+      return detailedDescription;
+    }
+
+    // Fall back to your existing p5-specific descriptions
     const blockType = block.type;
 
     // For certain block types, provide more specific descriptions
@@ -860,7 +715,7 @@ export class ScreenReader {
       return `Color: ${colorName}`;
     }
 
-    // Enhanced: Add field information for blocks with dropdowns or other editable fields
+    //Add field information for blocks with dropdowns or other editable fields
     const fields = block.inputList
       .flatMap(input => input.fieldRow)
       .filter(field => field.EDITABLE && field.getValue);
@@ -897,7 +752,7 @@ export class ScreenReader {
     }
 
     // Default description
-    return baseDescription + " block";
+    return blockType.replace(/_/g, ' ') + " block";
   }
 
 
@@ -974,237 +829,6 @@ export class ScreenReader {
     return 'custom color';
   }
 
-  private setupColorPickerListeners(): void {
-    this.debugLog('Setting up color picker listeners...');
-
-    // Listen for when color picker divs are shown
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        if (mutation.type === 'childList') {
-          mutation.addedNodes.forEach((node) => {
-            if (node instanceof HTMLElement) {
-              // Check if it's a color picker dropdown
-              if (node.classList.contains('blocklyDropdownDiv') ||
-                node.querySelector('.blocklyColourTable')) {
-                this.handleColorPicker(node);
-              }
-            }
-          });
-        }
-      });
-    });
-
-    // Observe the body for color picker additions
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true
-    });
-  }
-
-  // Handle color picker navigation
-  private handleColorPicker(pickerElement: HTMLElement): void {
-    this.debugLog('Handling color picker');
-
-    // Announce when color picker opens
-    this.speak('Color picker opened. Use arrow keys to navigate colors. Press Enter to select.');
-
-    // Find all elements that look like color cells
-    const colorCells = pickerElement.querySelectorAll(
-      '[role="button"][style*="background-color"], ' +
-      '[role="button"][style*="background"], ' +
-      '.blocklyColourCell, ' +
-      '[class*="colour"][role="button"], ' +
-      '[class*="color"][role="button"]'
-    );
-
-    this.debugLog(`Found ${colorCells.length} color cells`);
-
-    // Set up hover listeners for each cell
-    colorCells.forEach((cell) => {
-      if (cell instanceof HTMLElement) {
-        // Mouse hover
-        cell.addEventListener('mouseenter', () => {
-          const color = this.getColorFromCell(cell);
-          if (color) {
-            this.debugLog(`Mouse hover on color: ${color}`);
-            this.speak(color);
-          }
-        });
-
-        // Click listener
-        cell.addEventListener('click', () => {
-          const color = this.getColorFromCell(cell);
-          if (color) {
-            this.speak(`Selected ${color}`);
-          }
-        });
-      }
-    });
-
-    // Handle keyboard navigation with multiple event strategies
-    const handleKeyboardNavigation = (e: Event) => {
-      if (!(e instanceof KeyboardEvent)) return;
-
-      if (e.key.startsWith('Arrow') || e.key === 'Enter' || e.key === ' ') {
-        this.debugLog(`Key pressed in color picker: ${e.key}`);
-
-        // Use a timeout to let Blockly update the UI
-        setTimeout(() => {
-          // Try multiple strategies to find the currently focused color
-          let focusedCell: HTMLElement | null = null;
-
-          // Strategy 1: Look for element with focus
-          const activeElement = document.activeElement;
-          if (activeElement && activeElement.getAttribute('role') === 'button' &&
-            pickerElement.contains(activeElement)) {
-            focusedCell = activeElement as HTMLElement;
-          }
-
-          // Strategy 2: Look for aria-selected
-          if (!focusedCell) {
-            focusedCell = pickerElement.querySelector('[aria-selected="true"]') as HTMLElement;
-          }
-
-          // Strategy 3: Look for focused class
-          if (!focusedCell) {
-            focusedCell = pickerElement.querySelector('.blocklyColourHighlighted, .blocklyColourSelected') as HTMLElement;
-          }
-
-          // Strategy 4: Look for focused element within color cells
-          if (!focusedCell) {
-            colorCells.forEach((cell) => {
-              if (cell === document.activeElement) {
-                focusedCell = cell as HTMLElement;
-              }
-            });
-          }
-
-          if (focusedCell) {
-            const color = this.getColorFromCell(focusedCell);
-            if (color) {
-              this.debugLog(`Keyboard navigation to color: ${color}`);
-              if (e.key === 'Enter' || e.key === ' ') {
-                this.speak(`Selected ${color}`);
-              } else {
-                this.speak(color);
-              }
-            }
-          } else {
-            this.debugLog('Could not find focused color cell');
-          }
-        }, 100);
-      }
-    };
-
-    // Add keyboard listeners to multiple elements to catch events
-    pickerElement.addEventListener('keydown', handleKeyboardNavigation, true);
-
-    // Also add to document temporarily while color picker is open
-    const documentHandler = (e: Event) => {
-      if (pickerElement.style.display !== 'none' && pickerElement.offsetParent !== null) {
-        handleKeyboardNavigation(e);
-      } else {
-        // Remove handler if picker is closed
-        document.removeEventListener('keydown', documentHandler, true);
-      }
-    };
-
-    document.addEventListener('keydown', documentHandler, true);
-
-    // Monitor focus changes within the picker
-    pickerElement.addEventListener('focusin', (e) => {
-      const target = e.target as HTMLElement;
-      if (target.getAttribute('role') === 'button') {
-        const color = this.getColorFromCell(target);
-        if (color) {
-          this.debugLog(`Focus moved to color: ${color}`);
-          this.speak(color);
-        }
-      }
-    });
-  }
-
-  // Get color name from a color cell element
-  // Enhanced color extraction from cell
-  private getColorFromCell(cell: HTMLElement): string | null {
-    this.debugLog('Getting color from cell');
-
-    // Method 1: Direct style attribute
-    const style = cell.getAttribute('style');
-    if (style) {
-      const bgMatch = style.match(/background(?:-color)?:\s*([^;]+)/i);
-      if (bgMatch) {
-        const colorValue = bgMatch[1].trim();
-        this.debugLog(`Found color in style attribute: ${colorValue}`);
-
-        if (colorValue.startsWith('#')) {
-          return this.getColorNameFromHex(colorValue);
-        } else if (colorValue.startsWith('rgb')) {
-          const hexColor = this.rgbToHex(colorValue);
-          if (hexColor) {
-            return this.getColorNameFromHex(hexColor);
-          }
-        }
-      }
-    }
-
-    // Method 2: Computed style
-    const computedStyle = window.getComputedStyle(cell);
-    const bgColor = computedStyle.backgroundColor;
-    if (bgColor && bgColor !== 'transparent' && bgColor !== 'rgba(0, 0, 0, 0)') {
-      const hexColor = this.rgbToHex(bgColor);
-      if (hexColor) {
-        this.debugLog(`Got color from computed style: ${hexColor}`);
-        return this.getColorNameFromHex(hexColor);
-      }
-    }
-
-    // Method 3: Data attributes
-    const dataColor = cell.getAttribute('data-colour') ||
-      cell.getAttribute('data-color') ||
-      cell.getAttribute('title');
-    if (dataColor && dataColor.startsWith('#')) {
-      this.debugLog(`Got color from data attribute: ${dataColor}`);
-      return this.getColorNameFromHex(dataColor);
-    }
-
-    // Method 4: Child elements
-    const colorDiv = cell.querySelector('[style*="background"]') as HTMLElement;
-    if (colorDiv) {
-      return this.getColorFromCell(colorDiv);
-    }
-
-    this.debugLog('Could not extract color from cell');
-    return null;
-  }
-
-
-  // Convert RGB color string to hex
-  private rgbToHex(rgb: string): string | null {
-    // Handle hex colors that are already in the right format
-    if (rgb.startsWith('#')) {
-      return rgb;
-    }
-
-    // Handle rgb(r, g, b) format
-    const match = rgb.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
-    if (match) {
-      const r = parseInt(match[1]);
-      const g = parseInt(match[2]);
-      const b = parseInt(match[3]);
-
-      const toHex = (n: number) => {
-        const hex = n.toString(16);
-        return hex.length === 1 ? '0' + hex : hex;
-      };
-
-      return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-    }
-
-    return null;
-  }
-
-
   /**
     * Enhanced speak method with intelligent interruption
     * Replace the existing speak method
@@ -1225,7 +849,7 @@ export class ScreenReader {
       this.interruptionTimer = null;
     }
 
-    // IMPORTANT: Clear pending messages for high priority announcements
+    // Clear pending messages for high priority announcements
     // This prevents old navigation messages from playing when you stop moving
     if (priority === 'high') {
       this.pendingMessage = null;
@@ -1263,6 +887,7 @@ export class ScreenReader {
     // No current speech, speak immediately
     this.speakImmediate(message);
   }
+
   /**
    * Interrupt current speech and speak new message
    */
@@ -1290,9 +915,9 @@ export class ScreenReader {
       const utterance = new SpeechSynthesisUtterance(message);
 
       // Set properties for better screen reader experience
-      utterance.rate = 1.7; // Slightly faster than default
-      utterance.pitch = 1.0; // Normal pitch
-      utterance.volume = 1.0; // Full volume
+      utterance.rate = 1.7;
+      utterance.pitch = 1.0;
+      utterance.volume = 1.0;
 
       // Track the current utterance and start time
       this.currentUtterance = utterance;
@@ -1408,11 +1033,15 @@ export class ScreenReader {
       }
     } else if (type === Blockly.ASTNode.types.FIELD) {
       const field = location as Blockly.Field;
-      const block = field.getSourceBlock();
-      if (block) {
-        this.speakHighPriority(`Field ${field.name} with value ${field.getText()}`);
+      const fieldValue = field.getText();
+
+      // Check if this is a dropdown field
+      const isDropdown = field instanceof Blockly.FieldDropdown;
+
+      if (isDropdown) {
+        this.speakHighPriority(`Dropdown with value ${fieldValue}. Press Enter to open menu.`);
       } else {
-        this.speakHighPriority(`Field ${field.name} with value ${field.getText()} on unknown block`);
+        this.speakHighPriority(`Field with value ${fieldValue}`);
       }
     } else if (type === Blockly.ASTNode.types.INPUT) {
       const input = location as Blockly.Input;

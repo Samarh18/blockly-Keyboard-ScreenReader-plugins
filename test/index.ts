@@ -53,28 +53,15 @@ function getOptions() {
   const stackConnections = !noStackParam;
 
   const toolboxParam = params.get('toolbox');
-  const toolbox = toolboxParam ?? 'flyout';
+  const toolbox = toolboxParam ?? 'toolbox';
   const toolboxObject =
-    toolbox === 'flyout' ? toolboxFlyout : toolboxCategories;
-
-  // Update form inputs to match params, but only after the page is
-  // fully loaded as Chrome (at least) tries to restore previous form
-  // values and does so _after_ DOMContentLoaded has fired, which can
-  // result in the form inputs being out-of-sync with the actual
-  // options when doing browswer page navigation.
-  window.addEventListener('load', () => {
-    (document.getElementById('toolbox') as HTMLSelectElement).value = toolbox;
-    (document.getElementById('renderer') as HTMLSelectElement).value = renderer;
-    (document.getElementById('scenario') as HTMLSelectElement).value = scenario;
-    (document.getElementById('noStack') as HTMLInputElement).checked =
-      !stackConnections;
-  });
+    toolbox === 'toolbox' ? toolboxFlyout : toolboxCategories;
 
   return {
     scenario,
     stackConnections,
     renderer,
-    toolbox: toolboxObject,
+    toolbox: toolboxCategories,
   };
 }
 

@@ -22,21 +22,21 @@ import {
 } from 'blockly/core';
 
 import * as Constants from './constants';
-import {Clipboard} from './actions/clipboard';
-import {DeleteAction} from './actions/delete';
-import {EditAction} from './actions/edit';
-import {InsertAction} from './actions/insert';
-import {Navigation} from './navigation';
-import {ShortcutDialog} from './shortcut_dialog';
-import {WorkspaceMovement} from './actions/ws_movement';
-import {ArrowNavigation} from './actions/arrow_navigation';
-import {ExitAction} from './actions/exit';
-import {EnterAction} from './actions/enter';
-import {DisconnectAction} from './actions/disconnect';
-import {ActionMenu} from './actions/action_menu';
-import {MoveActions} from './actions/move';
-import {Mover} from './actions/mover';
-import {UndoRedoAction} from './actions/undo_redo';
+import { Clipboard } from './actions/clipboard';
+import { DeleteAction } from './actions/delete';
+import { EditAction } from './actions/edit';
+import { InsertAction } from './actions/insert';
+import { Navigation } from './navigation';
+import { ShortcutDialog } from './shortcut_dialog';
+import { WorkspaceMovement } from './actions/ws_movement';
+import { ArrowNavigation } from './actions/arrow_navigation';
+import { ExitAction } from './actions/exit';
+import { EnterAction } from './actions/enter';
+import { DisconnectAction } from './actions/disconnect';
+import { ActionMenu } from './actions/action_menu';
+import { MoveActions } from './actions/move';
+import { Mover } from './actions/mover';
+import { UndoRedoAction } from './actions/undo_redo';
 
 const KeyCodes = BlocklyUtils.KeyCodes;
 
@@ -240,40 +240,40 @@ export class NavigationController {
   protected shortcuts: {
     [name: string]: ShortcutRegistry.KeyboardShortcut;
   } = {
-    /** Move focus to or from the toolbox. */
-    focusToolbox: {
-      name: Constants.SHORTCUT_NAMES.TOOLBOX,
-      preconditionFn: (workspace) =>
-        !workspace.isDragging() && this.navigation.canCurrentlyEdit(workspace),
-      callback: (workspace) => {
-        switch (this.navigation.getState(workspace)) {
-          case Constants.STATE.WORKSPACE:
-            if (!workspace.getToolbox()) {
-              this.navigation.focusFlyout(workspace);
-            } else {
-              this.navigation.focusToolbox(workspace);
-            }
-            return true;
-          default:
-            return false;
-        }
+      /** Move focus to or from the toolbox. */
+      focusToolbox: {
+        name: Constants.SHORTCUT_NAMES.TOOLBOX,
+        preconditionFn: (workspace) =>
+          !workspace.isDragging() && this.navigation.canCurrentlyEdit(workspace),
+        callback: (workspace) => {
+          switch (this.navigation.getState(workspace)) {
+            case Constants.STATE.WORKSPACE:
+              if (!workspace.getToolbox()) {
+                this.navigation.focusFlyout(workspace);
+              } else {
+                this.navigation.focusToolbox(workspace);
+              }
+              return true;
+            default:
+              return false;
+          }
+        },
+        keyCodes: [KeyCodes.T],
       },
-      keyCodes: [KeyCodes.T],
-    },
 
-    /** Clean up the workspace. */
-    cleanup: {
-      name: Constants.SHORTCUT_NAMES.CLEAN_UP,
-      preconditionFn: (workspace) =>
-        this.navigation.canCurrentlyEdit(workspace) &&
-        workspace.getTopBlocks(false).length > 0,
-      callback: (workspace) => {
-        workspace.cleanUp();
-        return true;
+      /** Clean up the workspace. */
+      cleanup: {
+        name: Constants.SHORTCUT_NAMES.CLEAN_UP,
+        preconditionFn: (workspace) =>
+          this.navigation.canCurrentlyEdit(workspace) &&
+          workspace.getTopBlocks(false).length > 0,
+        callback: (workspace) => {
+          workspace.cleanUp();
+          return true;
+        },
+        keyCodes: [KeyCodes.C],
       },
-      keyCodes: [KeyCodes.C],
-    },
-  };
+    };
 
   /**
    * Registers all default keyboard shortcut items for keyboard

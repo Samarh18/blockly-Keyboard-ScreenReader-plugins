@@ -5,8 +5,10 @@
  */
 
 import * as Blockly from 'blockly/core';
-import {NavigationController} from './navigation_controller';
-import {getFlyoutElement, getToolboxElement} from './workspace_utilities';
+import { NavigationController } from './navigation_controller';
+import { getFlyoutElement, getToolboxElement } from './workspace_utilities';
+import { GlobalShortcuts } from './global_shortcuts';
+
 
 /** Options object for KeyboardNavigation instances. */
 export interface NavigationOptions {
@@ -18,8 +20,11 @@ const defaultOptions: NavigationOptions = {
   cursor: {},
 };
 
+
+
 /** Plugin for keyboard navigation. */
 export class KeyboardNavigation {
+
   /** The workspace. */
   protected workspace: Blockly.WorkspaceSvg;
 
@@ -50,6 +55,10 @@ export class KeyboardNavigation {
   /** Cursor for the main workspace. */
   private cursor: Blockly.LineCursor;
 
+  /** Global shortcuts handler. */
+  private globalShortcuts: GlobalShortcuts;  // <-- ADD IT HERE
+
+
   /**
    * These fields are used to preserve the workspace's initial state to restore
    * it when/if keyboard navigation is disabled.
@@ -76,12 +85,12 @@ export class KeyboardNavigation {
    */
   constructor(
     workspace: Blockly.WorkspaceSvg,
-    options: Partial<NavigationOptions>,
+    options: Partial<NavigationOptions> = {},
   ) {
     this.workspace = workspace;
 
     // Regularise options and apply defaults.
-    options = {...defaultOptions, ...options};
+    options = { ...defaultOptions, ...options };
 
     this.navigationController = new NavigationController();
     this.navigationController.init();
@@ -93,6 +102,13 @@ export class KeyboardNavigation {
 
     this.cursor = new Blockly.LineCursor(workspace, options.cursor);
 
+    // Initialize global shortcuts
+    this.globalShortcuts = new GlobalShortcuts(
+      workspace,
+      this.navigationController
+    );
+    this.globalShortcuts.install();
+
     // Ensure that only the root SVG G (group) has a tab index.
     this.injectionDivTabIndex = workspace
       .getInjectionDiv()
@@ -103,6 +119,7 @@ export class KeyboardNavigation {
       .getAttribute('tabindex');
     // We add a focus listener below so use -1 so it doesn't become focusable.
     workspace.getParentSvg().setAttribute('tabindex', '-1');
+
 
     // Move the flyout for logical tab order.
     const flyoutElement = getFlyoutElement(workspace);
@@ -224,6 +241,8 @@ export class KeyboardNavigation {
    * Disables keyboard navigation for this navigator's workspace.
    */
   dispose() {
+    this.globalShortcuts.uninstall();
+
     // Revert markFocused monkey patch.
     this.workspace.markFocused = this.oldMarkFocused;
     if (this.oldFlyoutMarkFocused) {
