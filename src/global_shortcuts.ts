@@ -67,6 +67,12 @@ export class GlobalShortcuts {
                 e.stopPropagation();
                 this.focusRunButton();
                 break;
+
+            case 'w':
+                e.preventDefault();
+                e.stopPropagation();
+                this.focusWorkspace();
+                break;
         }
     }
 
@@ -130,5 +136,18 @@ export class GlobalShortcuts {
         } else {
             console.warn('Could not find Run Code button with id="run"');
         }
+    }
+
+    /**
+     * Focus the workspace and enable keyboard navigation if needed.
+     */
+    private focusWorkspace() {
+        // Enable keyboard navigation if not already enabled
+        if (!this.workspace.keyboardAccessibilityMode) {
+            this.navigationController.enable(this.workspace);
+        }
+
+        // Focus the workspace
+        this.navigationController.focusWorkspace(this.workspace);
     }
 }
