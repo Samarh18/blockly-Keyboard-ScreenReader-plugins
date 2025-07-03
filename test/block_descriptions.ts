@@ -175,9 +175,9 @@ const blockDescriptions: BlockDescriptions = {
             SIN: 'sine',
             COS: 'cosine',
             TAN: 'tangent',
-            ASIN: 'asine',
-            ACOS: 'acosine',
-            ATAN: 'atangent'
+            ASIN: 'arc sine',
+            ACOS: 'arc cosine',
+            ATAN: 'arc tangent'
         } as const;
         return `${opMessages[op]} ${numMessage}`;
     },

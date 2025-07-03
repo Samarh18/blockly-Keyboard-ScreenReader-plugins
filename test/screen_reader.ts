@@ -18,6 +18,11 @@ export class ScreenReader {
   private isSpeaking: boolean = false;
   private debugMode: boolean = true; // Enable debug logging
 
+  private menuObservers?: {
+    menuObserver: MutationObserver | null;
+    contextMenuObserver: MutationObserver | null;
+  };
+
   private currentUtterance: SpeechSynthesisUtterance | null = null;
   private utteranceStartTime: number = 0;
   private minSpeakTime: number = 500; // Minimum time in ms to speak before allowing interruption
@@ -26,7 +31,7 @@ export class ScreenReader {
   private interruptionTimer: number | null = null;
   private hasLeftWorkspace: boolean = false;
 
-  private currentDropdownField: Blockly.Field | null = null;
+  private isDeletingAll: boolean = false;
 
 
   /**
@@ -154,114 +159,490 @@ export class ScreenReader {
 
     return emojiMap[emoji] || `emoji ${emoji}`;
   }
+  /**
+ * Convert mathematical and special symbols to readable text
+ */
+  private cleanTextForScreenReader(text: string): string {
+    // First, remove any invisible Unicode characters like RTL/LTR marks
+    let cleanText = text
+      .replace(/[\u200E\u200F\u202A-\u202E]/g, '') // Remove directional marks
+      .trim();
+
+    // Handle complex mathematical expressions FIRST before checking individual symbols
+
+    // Handle expressions like "10^" and "e^"
+    if (cleanText === '10^') {
+      return '10 to the power of';
+    }
+    if (cleanText === 'e^') {
+      return 'e to the power of';
+    }
+
+    // Handle sqrt() function format
+    if (cleanText.startsWith('sqrt(') && cleanText.endsWith(')')) {
+      const content = cleanText.slice(5, -1); // Remove "sqrt(" and ")"
+      if (content === '2') {
+        return 'square root of 2';
+      } else if (content === '1/2') {
+        return 'square root of one half';
+      } else {
+        return `square root of ${content}`;
+      }
+    }
+
+    // Handle # in context - check for phrases first
+    if (cleanText.includes('#')) {
+      // Replace # with "number" in common phrases
+      cleanText = cleanText
+        .replace(/^#/, 'number') // # at start
+        .replace(/\s#\s/g, ' number ') // # with spaces around it
+        .replace(/\s#$/g, ' number') // # at end with space before
+        .replace(/#\sfrom\sthe\send/g, 'number from the end')
+        .replace(/#\sfrom\send/g, 'number from end')
+        .replace(/#\sfrom\sstart/g, 'number from start');
+
+      // If we made replacements, return the result
+      if (cleanText !== text.trim()) {
+        return cleanText;
+      }
+    }
+
+    // Handle other mathematical functions with parentheses
+    if (cleanText.includes('(') && cleanText.includes(')')) {
+      // Replace function names with readable versions
+      cleanText = cleanText
+        .replace(/^sin\(/i, 'sine of ')
+        .replace(/^cos\(/i, 'cosine of ')
+        .replace(/^tan\(/i, 'tangent of ')
+        .replace(/^asin\(/i, 'arcsine of ')
+        .replace(/^acos\(/i, 'arccosine of ')
+        .replace(/^atan\(/i, 'arctangent of ')
+        .replace(/^ln\(/i, 'natural logarithm of ')
+        .replace(/^log\(/i, 'logarithm of ')
+        .replace(/^abs\(/i, 'absolute value of ')
+        .replace(/\)$/, ''); // Remove closing parenthesis
+
+      return cleanText;
+    }
+
+    // Mathematical operators - ORDER MATTERS! Check longer symbols first
+    const symbolMap: { [key: string]: string } = {
+      // List/Array symbols - moved to top for priority
+      '#': 'number',
+
+      // Comparison operators - check two-character operators first
+      '<=': 'less than or equal',
+      '≤': 'less than or equal',
+      '>=': 'greater than or equal',
+      '≥': 'greater than or equal',
+      '≠': 'not equal',
+      '!=': 'not equal',
+
+      // Then single character operators
+      '=': 'equals',
+      '<': 'less than',
+      '>': 'greater than',
+
+      // Mathematical operators
+      '+': 'plus',
+      '-': 'minus',
+      '×': 'times',
+      '*': 'times',
+      '÷': 'divided by',
+      '/': 'divided by',
+      '^': 'to the power of',
+      '√': 'square root',
+      '∛': 'cube root',
+
+      // Logic operators
+      '&&': 'and',
+      '||': 'or',
+      '∧': 'and',
+      '∨': 'or',
+      '¬': 'not',
+      '!': 'not',
+
+      // Mathematical constants
+      'π': 'pi',
+      'e': 'e',
+      '∞': 'infinity',
+      'φ': 'phi',
+      '√2': 'square root of 2',
+      '√½': 'square root of one half',
+
+      // Trigonometric functions (short forms)
+      'sin': 'sine',
+      'cos': 'cosine',
+      'tan': 'tangent',
+      'asin': 'arcsine',
+      'acos': 'arccosine',
+      'atan': 'arctangent',
+
+      // Other mathematical functions
+      'ln': 'natural logarithm',
+      'log₁₀': 'log base 10',
+      'log10': 'log base 10',
+      'eˣ': 'e to the x',
+      '10ˣ': '10 to the x',
+
+      // Special characters
+      '%': 'percent',
+      '°': 'degrees',
+      '∈': 'is in',
+      '∉': 'is not in',
+      '∅': 'empty set',
+      '[]': 'empty list',
+
+      // Greek letters often used in math
+      'α': 'alpha',
+      'β': 'beta',
+      'γ': 'gamma',
+      'δ': 'delta',
+      'θ': 'theta',
+      'λ': 'lambda',
+      'μ': 'mu',
+      'σ': 'sigma',
+      'Σ': 'sum',
+      'Π': 'product'
+    };
+
+    // Check for exact match with cleaned text
+    if (symbolMap[cleanText]) {
+      return symbolMap[cleanText];
+    }
+
+    // For single/double character symbols, return the translation
+    if (cleanText.length <= 2) {
+      // Check if it's a known symbol
+      for (const [symbol, readable] of Object.entries(symbolMap)) {
+        if (cleanText === symbol) {
+          return readable;
+        }
+      }
+    }
+
+    // Handle subscript numbers (like log₁₀)
+    let readableText = cleanText;
+    readableText = readableText.replace(/₀/g, ' sub 0')
+      .replace(/₁/g, ' sub 1')
+      .replace(/₂/g, ' sub 2')
+      .replace(/₃/g, ' sub 3')
+      .replace(/₄/g, ' sub 4')
+      .replace(/₅/g, ' sub 5')
+      .replace(/₆/g, ' sub 6')
+      .replace(/₇/g, ' sub 7')
+      .replace(/₈/g, ' sub 8')
+      .replace(/₉/g, ' sub 9');
+
+    // Handle superscript (like x²)
+    readableText = readableText.replace(/²/g, ' squared')
+      .replace(/³/g, ' cubed')
+      .replace(/ⁿ/g, ' to the n')
+      .replace(/ˣ/g, ' to the x');
+
+    return readableText || text;
+  };
 
   /**
- * Set up listeners for Blockly dropdown menus
- */
-  private setupBlocklyDropdownListeners(): void {
-    this.debugLog('Setting up Blockly dropdown listeners...');
+   * Set up comprehensive Blockly menu listeners with better symbol handling
+   */
+  private setupComprehensiveMenuListeners(): void {
+    this.debugLog('Setting up comprehensive menu listeners...');
 
-    // Track state to prevent duplicate announcements
-    let dropdownMonitorInterval: number | null = null;
-    let lastHighlightedText: string = '';
-    let isDropdownOpen: boolean = false;
-    let hasAnnouncedOpen: boolean = false;
+    // State tracking
+    let menuObserver: MutationObserver | null = null;
+    let lastAnnouncedMenuItem: string = '';
+    let menuItemCount: number = 0;
+    let currentMenuIndex: number = -1;
+    let monitorInterval: number | null = null;
+    let isMenuOpen: boolean = false;
+    let hasAnnouncedMenuOpen: boolean = false;
 
-    // Function to check for dropdown and highlighted items
-    const checkForDropdown = () => {
+    /**
+     * Extract and process menu item text
+     */
+    const getMenuItemText = (element: Element): string => {
+      let text = '';
+
+      // For dropdown menu items, try multiple strategies to get the full text
+
+      // Strategy 1: Look for .blocklyMenuItemContent
+      const contentSpan = element.querySelector('.blocklyMenuItemContent');
+      if (contentSpan) {
+        // Get all text content including child nodes
+        text = contentSpan.textContent?.trim() || '';
+
+        // If that didn't work, try getting innerHTML and stripping tags
+        if (!text || text === 'sqrt') {
+          const innerHTML = contentSpan.innerHTML;
+          // Strip HTML tags but preserve text
+          text = innerHTML.replace(/<[^>]*>/g, '').trim();
+        }
+      }
+
+      // Strategy 2: If no content span or text is incomplete, try the element itself
+      if (!text || text === 'sqrt') {
+        // Get all text nodes within the element
+        const walker = document.createTreeWalker(
+          element,
+          NodeFilter.SHOW_TEXT
+        );
+
+        let textContent = '';
+        let node;
+        while (node = walker.nextNode()) {
+          if (node.nodeValue) {
+            textContent += node.nodeValue;
+          }
+        }
+
+        if (textContent.trim()) {
+          text = textContent.trim();
+        }
+      }
+
+      // Strategy 3: Last resort - use textContent on the whole element
+      if (!text || text === 'sqrt') {
+        text = element.textContent?.trim() || '';
+      }
+
+      // Debug log the raw text
+      this.debugLog(`Raw menu text: "${text}"`);
+
+      // Remove any keyboard shortcut hints (usually in parentheses at the end)
+      text = text.replace(/\s*\(.*?\)\s*$/, '').trim();
+
+      // Convert symbols to readable text
+      const converted = this.cleanTextForScreenReader(text);
+
+      // Debug log to see what we're converting
+      if (text !== converted) {
+        this.debugLog(`Converting "${text}" to "${converted}"`);
+      } else {
+        this.debugLog(`No conversion for "${text}"`);
+      }
+
+      return converted || 'Unknown menu item';
+    };
+
+    // Also, let's add a special check in the announceMenuItem function to handle these cases:
+    const announceMenuItem = (item: Element, index: number, total: number) => {
+      let text = getMenuItemText(item);
+
+      // Special handling for math constants that might be abbreviated
+      if (text === 'sqrt' || text === '√') {
+        // Try to get more context by looking at the full element structure
+        const fullText = item.textContent?.trim() || '';
+        this.debugLog(`Full element text for sqrt item: "${fullText}"`);
+
+        // Check for common patterns
+        if (fullText.includes('sqrt(2)') || fullText.includes('√2')) {
+          text = 'square root of 2';
+        } else if (fullText.includes('sqrt(1/2)') || fullText.includes('√½')) {
+          text = 'square root of one half';
+        } else if (fullText.includes('sqrt')) {
+          // Extract what's after sqrt
+          const match = fullText.match(/sqrt\(([^)]+)\)/);
+          if (match && match[1]) {
+            text = `square root of ${match[1]}`;
+          }
+        }
+      }
+
+      const isDisabled = item.classList.contains('blocklyMenuItemDisabled') ||
+        item.classList.contains('blocklyContextMenuDisabled');
+
+      // Create a unique key for this announcement
+      const announcementKey = `${text}-${index}`;
+
+      if (announcementKey !== lastAnnouncedMenuItem) {
+        lastAnnouncedMenuItem = announcementKey;
+        const position = total > 1 ? `, ${index + 1} of ${total}` : '';
+        const status = isDisabled ? ' (disabled)' : '';
+
+        // Use high priority speech for menu navigation
+        this.speakHighPriority(`${text}${status}${position}`);
+      }
+    };
+
+    /**
+     * Monitor dropdown menus for changes
+     */
+    const monitorDropdownMenu = () => {
       const dropdownDiv = document.querySelector('.blocklyDropDownDiv') as HTMLElement;
 
       if (dropdownDiv && dropdownDiv.style.display !== 'none') {
-        if (!isDropdownOpen) {
-          // Dropdown just opened
-          isDropdownOpen = true;
-          hasAnnouncedOpen = false;
-          lastHighlightedText = ''; // Reset to ensure first item is announced
+        // Find all menu items
+        const menuItems = dropdownDiv.querySelectorAll('.blocklyMenuItem');
+        const newMenuItemCount = menuItems.length;
+
+        // Only update if count changed
+        if (newMenuItemCount !== menuItemCount) {
+          menuItemCount = newMenuItemCount;
         }
 
-        // Announce opening only once
-        if (!hasAnnouncedOpen) {
-          hasAnnouncedOpen = true;
-          try {
-            const owner = Blockly.DropDownDiv.getOwner() as Blockly.Field;
-            if (owner) {
-              this.currentDropdownField = owner;
-              const currentValue = owner.getText();
-              this.speak(`Dropdown opened. Current value: ${currentValue}. Use arrow keys to navigate.`);
-            }
-          } catch (e) {
-            this.debugLog('Could not get dropdown owner');
-          }
-        }
-
-        // Look for highlighted menu item
+        // Look for highlighted item
         const highlightedItem = dropdownDiv.querySelector('.blocklyMenuItemHighlight');
         if (highlightedItem) {
-          const text = highlightedItem.textContent?.trim() || '';
-          // Only announce if it's different from the last one
-          if (text && text !== lastHighlightedText) {
-            lastHighlightedText = text;
-            // Small delay to prevent interrupting the opening announcement
-            setTimeout(() => {
-              this.speak(text);
-            }, hasAnnouncedOpen ? 0 : 100);
+          const index = Array.from(menuItems).indexOf(highlightedItem);
+          if (index !== -1 && index !== currentMenuIndex) {
+            currentMenuIndex = index;
+            announceMenuItem(highlightedItem, index, menuItemCount);
           }
         }
-      } else if (isDropdownOpen) {
-        // Dropdown just closed
-        isDropdownOpen = false;
-        hasAnnouncedOpen = false;
-        lastHighlightedText = '';
-        this.currentDropdownField = null;
-
-        // Clear the monitoring interval
-        if (dropdownMonitorInterval) {
-          clearInterval(dropdownMonitorInterval);
-          dropdownMonitorInterval = null;
+      } else if (isMenuOpen) {
+        // Menu was just closed
+        isMenuOpen = false;
+        hasAnnouncedMenuOpen = false;
+        lastAnnouncedMenuItem = '';
+        currentMenuIndex = -1;
+        this.speak('Menu closed');
+        if (monitorInterval) {
+          clearInterval(monitorInterval);
+          monitorInterval = null;
         }
       }
     };
 
-    // Single event listener for keydown
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !dropdownMonitorInterval) {
-        // Check if we're on a dropdown field
-        const cursor = this.workspace.getCursor();
-        if (cursor) {
-          const curNode = cursor.getCurNode();
-          if (curNode && curNode.getType() === Blockly.ASTNode.types.FIELD) {
-            const field = curNode.getLocation() as Blockly.Field;
-            if (field instanceof Blockly.FieldDropdown) {
-              // Start monitoring only once
-              dropdownMonitorInterval = window.setInterval(checkForDropdown, 50);
+    // Set up mutation observer for dropdown menus
+    menuObserver = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        // Check for dropdown div visibility changes
+        if (mutation.target instanceof HTMLElement) {
+          if (mutation.target.classList.contains('blocklyDropDownDiv')) {
+            const isVisible = mutation.target.style.display !== 'none';
 
-              // Stop after 10 seconds
-              setTimeout(() => {
-                if (dropdownMonitorInterval) {
-                  clearInterval(dropdownMonitorInterval);
-                  dropdownMonitorInterval = null;
-                }
-              }, 10000);
+            if (isVisible && !isMenuOpen) {
+              isMenuOpen = true;
+              hasAnnouncedMenuOpen = false;
+              lastAnnouncedMenuItem = '';
+              currentMenuIndex = -1;
+
+              // Announce menu opening only once
+              if (!hasAnnouncedMenuOpen) {
+                hasAnnouncedMenuOpen = true;
+                setTimeout(() => {
+                  const menuItems = (mutation.target as HTMLElement).querySelectorAll('.blocklyMenuItem');
+                  const itemCount = menuItems.length;
+
+                  if (itemCount > 0) {
+                    this.speak(`Menu opened with ${itemCount} items. Use arrow keys to navigate.`);
+
+                    // Clear any existing monitor interval
+                    if (monitorInterval) {
+                      clearInterval(monitorInterval);
+                      monitorInterval = null;
+                    }
+
+                    // Start monitoring for changes
+                    monitorInterval = window.setInterval(() => {
+                      monitorDropdownMenu();
+                    }, 50);
+
+                    // Clear after 30 seconds to prevent memory leaks
+                    setTimeout(() => {
+                      if (monitorInterval) {
+                        clearInterval(monitorInterval);
+                        monitorInterval = null;
+                      }
+                    }, 30000);
+                  }
+                }, 100);
+              }
             }
+          }
+        }
+
+        // Also check for class changes on menu items (for highlighting)
+        if (mutation.type === 'attributes' &&
+          mutation.attributeName === 'class' &&
+          isMenuOpen) {
+          const target = mutation.target as HTMLElement;
+          if (target.classList.contains('blocklyMenuItem') &&
+            target.classList.contains('blocklyMenuItemHighlight')) {
+            const menuItems = target.parentElement?.querySelectorAll('.blocklyMenuItem');
+            if (menuItems) {
+              const index = Array.from(menuItems).indexOf(target);
+              if (index !== -1 && index !== currentMenuIndex) {
+                currentMenuIndex = index;
+                announceMenuItem(target, index, menuItems.length);
+              }
+            }
+          }
+        }
+      });
+    });
+
+    // Start observing
+    menuObserver.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['class', 'style']
+    });
+
+    // Enhanced keyboard navigation for menus
+    document.addEventListener('keydown', (e) => {
+      if (!isMenuOpen) return;
+
+      const dropdownDiv = document.querySelector('.blocklyDropDownDiv') as HTMLElement;
+      const dropdownVisible = dropdownDiv?.style.display !== 'none';
+
+      if (dropdownVisible) {
+        if (e.key === 'Escape') {
+          this.speak('Closing menu');
+        } else if (e.key === 'Enter' || e.key === ' ') {
+          const highlightedItem = document.querySelector('.blocklyMenuItemHighlight');
+          if (highlightedItem) {
+            const itemText = getMenuItemText(highlightedItem);
+            this.speak(`Selected ${itemText}`);
           }
         }
       }
     });
 
-    // Also start monitoring on mousedown (but not multiple times)
-    document.addEventListener('mousedown', (e) => {
-      const target = e.target as HTMLElement;
-      // Check if clicking on a dropdown field
-      if (target.closest('.blocklyEditableText') || target.closest('.blocklyDropdownDiv')) {
-        if (!dropdownMonitorInterval) {
-          dropdownMonitorInterval = window.setInterval(checkForDropdown, 50);
+    // Store observer for cleanup
+    this.menuObservers = { menuObserver, contextMenuObserver: null };
+  }
 
-          setTimeout(() => {
-            if (dropdownMonitorInterval) {
-              clearInterval(dropdownMonitorInterval);
-              dropdownMonitorInterval = null;
+  /**
+   * Set up listener for toolbox selection changes
+   */
+  private setupToolboxSelectionListener(): void {
+    // Listen for the Blockly event that fires when toolbox selection changes
+    this.workspace.addChangeListener((event: Blockly.Events.Abstract) => {
+      // Blockly fires a TOOLBOX_ITEM_SELECT event when selection changes
+      if (event.type === Blockly.Events.TOOLBOX_ITEM_SELECT) {
+        const selectEvent = event as Blockly.Events.ToolboxItemSelect;
+        const toolbox = this.workspace.getToolbox();
+
+        if (!toolbox || !(toolbox instanceof Blockly.Toolbox)) return;
+
+        // Get the selected item
+        const selectedItem = toolbox.getSelectedItem();
+        if (selectedItem && 'getName' in selectedItem && typeof selectedItem.getName === 'function') {
+          const categoryName = selectedItem.getName();
+          const firstLetter = categoryName.charAt(0).toUpperCase();
+
+          // Now we know toolbox is a Blockly.Toolbox, so getToolboxItems() exists
+          const allItems = toolbox.getToolboxItems();
+          const matchingItems = allItems.filter((item: Blockly.IToolboxItem) => {
+            if ('getName' in item && typeof item.getName === 'function') {
+              return item.getName().toUpperCase().startsWith(firstLetter) &&
+                item.isSelectable();
             }
-          }, 10000);
+            return false;
+          });
+
+          if (matchingItems.length > 1) {
+            // Find the index of current selection among matching items
+            const currentIndex = matchingItems.findIndex((item: Blockly.IToolboxItem) => item === selectedItem) + 1;
+            this.speakHighPriority(
+              `${categoryName} category, ${currentIndex} of ${matchingItems.length} starting with ${firstLetter}`
+            );
+          } else {
+            this.speakHighPriority(`${categoryName} category selected`);
+          }
         }
       }
     });
@@ -273,6 +654,12 @@ export class ScreenReader {
    */
   private initEventListeners(): void {
     this.debugLog('Initializing event listeners...');
+
+    this.setupComprehensiveMenuListeners();
+
+    this.setupToolboxSelectionListener();
+
+
 
     // Add a keyboard event listener to detect Tab key navigation
     document.addEventListener('keydown', (e) => {
@@ -301,8 +688,51 @@ export class ScreenReader {
         }, 100);
       }
 
-      this.setupBlocklyDropdownListeners();
+    });
 
+    // Add listener for workspace action shortcuts (C for cleanup, D for delete all)
+    document.addEventListener('keydown', (e) => {
+      // Only handle if we're focused on the workspace
+      const workspaceHasFocus = document.activeElement === this.workspace.getParentSvg() ||
+        this.workspace.getParentSvg().contains(document.activeElement as Node);
+
+      if (!workspaceHasFocus) return;
+
+      // Don't trigger if modifiers are pressed (except shift for capitals)
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+      // Check if workspace is editable
+      if (this.workspace.options.readOnly) return;
+
+      switch (e.key.toLowerCase()) {
+        case 'c':
+          // Clean up workspace
+          const blocksToClean = this.workspace.getTopBlocks(false).length;
+          if (blocksToClean > 0) {
+            // The actual cleanup will be handled by the navigation controller
+            // We just announce the action after a brief delay to ensure it happened
+            setTimeout(() => {
+              this.forceSpeek(`Cleaned up workspace. blocks organized.`);
+            }, 150);
+          }
+          break;
+
+        // 3. Update your keyboard shortcut handler for 'D':
+        case 'd':
+          // Delete all blocks
+          // Set flag to suppress individual delete announcements
+          this.isDeletingAll = true;
+
+          // Announce immediately
+          this.forceSpeek('All blocks are deleted');
+
+          // Reset the flag after 500ms
+          setTimeout(() => {
+            this.isDeletingAll = false;
+          }, 1000);
+
+          break;
+      }
     });
 
     this.setupDropdownNavigation();
@@ -330,7 +760,15 @@ export class ScreenReader {
           }
         }
       } else if (event.type === Blockly.Events.BLOCK_DELETE) {
+        const deleteEvent = event as Blockly.Events.BlockDelete;
         this.debugLog('Block deleted');
+
+        // If we're in delete all mode, don't announce individual deletes
+        if (this.isDeletingAll) {
+          return;
+        }
+
+        // Only announce individual deletions
         this.speak("Block deleted");
       } else if (event.type === Blockly.Events.BLOCK_CHANGE) {
         const changeEvent = event as Blockly.Events.BlockChange;
@@ -404,7 +842,7 @@ export class ScreenReader {
         // Find the currently selected category
         const selectedItem = target.querySelector('[aria-selected="true"]');
         const categoryName = selectedItem?.textContent?.trim() || 'first category';
-        this.speak(`Toolbox categories. ${categoryName} selected. Use arrow keys to navigate.`);
+        this.speak(`Blocks menu categories. ${categoryName} selected. Use arrow keys to navigate.`);
 
         // Set up arrow key navigation for this specific element
         if (!target.hasAttribute('data-arrow-handler')) {
@@ -429,7 +867,7 @@ export class ScreenReader {
       switch (target.tagName) {
         case 'BUTTON':
           const buttonText = target.textContent?.trim() || target.getAttribute('aria-label') || 'Unknown button';
-          this.speak(`Button: ${buttonText}`);
+          this.speak(`${buttonText} button`);
           break;
 
         case 'SELECT':
@@ -1033,7 +1471,10 @@ export class ScreenReader {
       }
     } else if (type === Blockly.ASTNode.types.FIELD) {
       const field = location as Blockly.Field;
-      const fieldValue = field.getText();
+
+      // Get the field value and clean it for screen reader
+      let fieldValue = field.getText();
+      fieldValue = this.cleanTextForScreenReader(fieldValue);
 
       // Check if this is a dropdown field
       const isDropdown = field instanceof Blockly.FieldDropdown;
@@ -1070,6 +1511,16 @@ export class ScreenReader {
     if (this.interruptionTimer) {
       clearTimeout(this.interruptionTimer);
       this.interruptionTimer = null;
+    }
+
+    // Clean up menu observers
+    if (this.menuObservers) {
+      if (this.menuObservers.menuObserver) {
+        this.menuObservers.menuObserver.disconnect();
+      }
+      if (this.menuObservers.contextMenuObserver) {
+        this.menuObservers.contextMenuObserver.disconnect();
+      }
     }
 
     // Cancel any pending speech

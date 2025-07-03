@@ -25,7 +25,7 @@ import * as Constants from './constants';
 import { Clipboard } from './actions/clipboard';
 import { DeleteAction } from './actions/delete';
 import { EditAction } from './actions/edit';
-import { InsertAction } from './actions/insert';
+//import { InsertAction } from './actions/insert';
 import { Navigation } from './navigation';
 import { ShortcutDialog } from './shortcut_dialog';
 import { WorkspaceMovement } from './actions/ws_movement';
@@ -57,7 +57,7 @@ export class NavigationController {
   editAction: EditAction = new EditAction(this.navigation);
 
   /** Context menu and keyboard action for insertion. */
-  insertAction: InsertAction = new InsertAction(this.navigation);
+  //insertAction: InsertAction = new InsertAction(this.navigation);
 
   /** Keyboard shortcut for disconnection. */
   disconnectAction: DisconnectAction = new DisconnectAction(this.navigation);
@@ -87,6 +87,77 @@ export class NavigationController {
     | typeof Blockly.Toolbox.prototype.onShortcut
     | null = null;
 
+  private lastToolboxLetter = '';
+  private lastToolboxLetterTime = 0;
+  private currentToolboxLetterIndex = 0;
+
+  // Add the method here, before init()
+  /**
+   * Handle first letter navigation in the toolbox
+   */
+  /**
+ * Handle first letter navigation in the toolbox
+ */
+  private handleToolboxFirstLetter(
+    workspace: Blockly.WorkspaceSvg,
+    letter: string
+  ): boolean {
+    const toolbox = workspace.getToolbox();
+    if (!toolbox || !(toolbox instanceof Blockly.Toolbox)) {
+      return false;
+    }
+
+    const currentTime = Date.now();
+    const allItems = toolbox.getToolboxItems();
+
+    // Filter items that start with the pressed letter
+    const matchingItems = allItems.filter(item => {
+      // Check if item is a ToolboxCategory (which has getName)
+      if ('getName' in item && typeof item.getName === 'function') {
+        const name = item.getName().toUpperCase();
+        return name.startsWith(letter) && item.isSelectable();
+      }
+      return false;
+    });
+
+    if (matchingItems.length === 0) {
+      // Let screen reader announce no matches
+      return false;
+    }
+
+    // Determine which item to select
+    let targetIndex = 0;
+
+    // If same letter pressed within 2 seconds, cycle to next match
+    if (letter === this.lastToolboxLetter &&
+      (currentTime - this.lastToolboxLetterTime) < 2000) {
+      this.currentToolboxLetterIndex =
+        (this.currentToolboxLetterIndex + 1) % matchingItems.length;
+      targetIndex = this.currentToolboxLetterIndex;
+    } else {
+      // New letter or timeout - start from first match
+      this.currentToolboxLetterIndex = 0;
+      targetIndex = 0;
+    }
+
+    // Update tracking variables
+    this.lastToolboxLetter = letter;
+    this.lastToolboxLetterTime = currentTime;
+
+    // Find the position of the target item in the full list
+    const targetItem = matchingItems[targetIndex];
+    const fullListIndex = allItems.indexOf(targetItem);
+
+    if (fullListIndex !== -1) {
+      // Use the toolbox's own selection method
+      toolbox.selectItemByPosition(fullListIndex);
+
+      // The screen reader will pick up the change through its existing listeners
+      return true;
+    }
+
+    return false;
+  }
   /**
    * Registers the default keyboard shortcuts for keyboard navigation.
    */
@@ -258,7 +329,7 @@ export class NavigationController {
               return false;
           }
         },
-        keyCodes: [KeyCodes.T],
+        keyCodes: [KeyCodes.B],
       },
 
       /** Clean up the workspace. */
@@ -273,6 +344,69 @@ export class NavigationController {
         },
         keyCodes: [KeyCodes.C],
       },
+
+      /** Delete all blocks from the workspace. */
+      deleteAll: {
+        name: 'DELETE_ALL_BLOCKS',
+        preconditionFn: (workspace) =>
+          this.navigation.canCurrentlyEdit(workspace) &&
+          workspace.getTopBlocks(false).length > 0,
+        callback: (workspace) => {
+          // Get all top-level blocks
+          const topBlocks = workspace.getTopBlocks(false);
+
+          if (topBlocks.length === 0) {
+            return false;
+          }
+
+          // Delete all blocks
+          Blockly.Events.setGroup(true);
+          try {
+            topBlocks.forEach(block => {
+              block.dispose(true); // true = heal stack after deletion
+            });
+          } finally {
+            Blockly.Events.setGroup(false);
+          }
+
+          const announcement = `Deleted all blocks from workspace`;
+
+          console.log(announcement);
+
+          return true;
+        },
+        keyCodes: [KeyCodes.D],
+      },
+      /** First letter navigation for toolbox */
+      /** First letter navigation for toolbox */
+      toolboxFirstLetter: {
+        name: 'TOOLBOX_FIRST_LETTER',
+        preconditionFn: (workspace) => {
+          // Only active when toolbox has focus
+          return this.navigation.getState(workspace) === Constants.STATE.TOOLBOX &&
+            workspace.getToolbox() !== null;
+        },
+        callback: (workspace, e) => {
+          const keyboardEvent = e as KeyboardEvent;
+          const letter = keyboardEvent.key.toUpperCase();
+
+          // Only handle our specific letters
+          if (!['L', 'M', 'T', 'V', 'F', 'P'].includes(letter)) {
+            return false;
+          }
+
+          return this.handleToolboxFirstLetter(workspace, letter);
+        },
+        // Only register the specific letters we need
+        keyCodes: [
+          KeyCodes.L,  // 76 - Logic, Loops, Lists
+          KeyCodes.M,  // 77 - Math
+          KeyCodes.T,  // 84 - Text
+          KeyCodes.V,  // 86 - Variables
+          KeyCodes.F,  // 70 - Functions
+          KeyCodes.P,  // 80 - p5 blocks
+        ],
+      },
     };
 
   /**
@@ -286,7 +420,7 @@ export class NavigationController {
     }
     this.deleteAction.install();
     this.editAction.install();
-    this.insertAction.install();
+    //this.insertAction.install();
     this.workspaceMovement.install();
     this.arrowNavigation.install();
     this.exitAction.install();
@@ -312,7 +446,7 @@ export class NavigationController {
     this.moveActions.uninstall();
     this.deleteAction.uninstall();
     this.editAction.uninstall();
-    this.insertAction.uninstall();
+    //this.insertAction.uninstall();
     this.disconnectAction.uninstall();
     this.clipboard.uninstall();
     this.workspaceMovement.uninstall();

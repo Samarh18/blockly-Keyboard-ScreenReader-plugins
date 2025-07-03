@@ -10,8 +10,8 @@ import {
   utils,
   WorkspaceSvg,
 } from 'blockly';
-import {Direction} from '../drag_direction';
-import {Mover} from './mover';
+import { Direction } from '../drag_direction';
+import { Mover } from './mover';
 
 const KeyCodes = utils.KeyCodes;
 const createSerializedKey = ShortcutRegistry.registry.createSerializedKey.bind(
@@ -22,7 +22,7 @@ const createSerializedKey = ShortcutRegistry.registry.createSerializedKey.bind(
  * Actions for moving blocks with keyboard shortcuts.
  */
 export class MoveActions {
-  constructor(private mover: Mover) {}
+  constructor(private mover: Mover) { }
 
   private shortcuts: ShortcutRegistry.KeyboardShortcut[] = [
     // Begin and end move.
@@ -30,7 +30,7 @@ export class MoveActions {
       name: 'Start move',
       preconditionFn: (workspace) => this.mover.canMove(workspace),
       callback: (workspace) => this.mover.startMove(workspace),
-      keyCodes: [KeyCodes.M],
+      keyCodes: [KeyCodes.G],
     },
     {
       name: 'Finish move',
@@ -126,7 +126,7 @@ export class MoveActions {
 
   menuItems: ContextMenuRegistry.RegistryItem[] = [
     {
-      displayText: 'Move Block (M)',
+      displayText: 'Move Block (G)',
       preconditionFn: (scope) => {
         const workspace = scope.block?.workspace as WorkspaceSvg | null;
         if (!workspace) return 'hidden';

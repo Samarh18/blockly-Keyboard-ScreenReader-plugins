@@ -56,7 +56,7 @@ export class GlobalShortcuts {
         }
 
         switch (e.key.toLowerCase()) {
-            case 't':
+            case 'b':
                 e.preventDefault();
                 e.stopPropagation();
                 this.openToolbox();
