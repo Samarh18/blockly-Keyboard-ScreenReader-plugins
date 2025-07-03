@@ -4,11 +4,165 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import {p5CategoryContents} from './blocks/toolbox.js';
+import { p5CategoryContents } from './blocks/toolbox.js';
 
 export default {
   kind: 'categoryToolbox',
   contents: [
+    {
+      kind: 'category',
+      name: 'Functions',
+      custom: 'PROCEDURE',
+      categorystyle: 'procedure_category',
+    },
+    {
+      kind: 'category',
+      name: 'Lists',
+      categorystyle: 'list_category',
+      contents: [
+        {
+          type: 'lists_create_with',
+          kind: 'block',
+        },
+        {
+          type: 'lists_create_with',
+          kind: 'block',
+        },
+        {
+          type: 'lists_repeat',
+          kind: 'block',
+          inputs: {
+            NUM: {
+              shadow: {
+                type: 'math_number',
+                fields: {
+                  NUM: 5,
+                },
+              },
+            },
+          },
+        },
+        {
+          type: 'lists_length',
+          kind: 'block',
+        },
+        {
+          type: 'lists_isEmpty',
+          kind: 'block',
+        },
+        {
+          type: 'lists_indexOf',
+          kind: 'block',
+
+          fields: {
+            END: 'FIRST',
+          },
+          inputs: {
+            VALUE: {
+              block: {
+                type: 'variables_get',
+                fields: {
+                  VAR: {
+                    name: 'list',
+                  },
+                },
+              },
+            },
+          },
+        },
+        {
+          type: 'lists_getIndex',
+          kind: 'block',
+          fields: {
+            MODE: 'GET',
+            WHERE: 'FROM_START',
+          },
+          inputs: {
+            VALUE: {
+              block: {
+                type: 'variables_get',
+                fields: {
+                  VAR: {
+                    name: 'list',
+                  },
+                },
+              },
+            },
+          },
+        },
+        {
+          type: 'lists_setIndex',
+          kind: 'block',
+          fields: {
+            MODE: 'SET',
+            WHERE: 'FROM_START',
+          },
+          inputs: {
+            LIST: {
+              block: {
+                type: 'variables_get',
+                fields: {
+                  VAR: {
+                    name: 'list',
+                  },
+                },
+              },
+            },
+          },
+        },
+        {
+          type: 'lists_getSublist',
+          kind: 'block',
+          fields: {
+            WHERE1: 'FROM_START',
+            WHERE2: 'FROM_START',
+          },
+          inputs: {
+            LIST: {
+              block: {
+                type: 'variables_get',
+                fields: {
+                  VAR: {
+                    name: 'list',
+                  },
+                },
+              },
+            },
+          },
+        },
+        {
+          type: 'lists_split',
+          kind: 'block',
+
+          fields: {
+            MODE: 'SPLIT',
+          },
+          inputs: {
+            DELIM: {
+              shadow: {
+                type: 'text',
+                fields: {
+                  TEXT: ',',
+                },
+              },
+            },
+          },
+        },
+        {
+          type: 'lists_sort',
+          kind: 'block',
+
+          fields: {
+            TYPE: 'NUMERIC',
+            DIRECTION: '1',
+          },
+        },
+        {
+          type: 'lists_reverse',
+          kind: 'block',
+        },
+      ],
+    },
     {
       kind: 'category',
       name: 'Logic',
@@ -363,6 +517,39 @@ export default {
         },
       ],
     },
+    // {
+    //   'kind': 'category',
+    //   'name': 'Misc',
+    //   'contents': [
+    //     {
+    //       kind: 'label',
+    //       text: 'This is a label',
+    //     },
+    //     {
+    //       'kind': 'category',
+    //       'name': 'A subcategory',
+    //       'contents': [
+    //         {
+    //           kind: 'label',
+    //           text: 'This is another label',
+    //         },
+    //         {
+    //           kind: 'block',
+    //           type: 'colour_random',
+    //         },
+    //       ],
+    //     },
+    //     {
+    //       'kind': 'button',
+    //       'text': 'This is a button',
+    //       'callbackKey': 'unimplemented',
+    //     },
+    //     {
+    //       kind: 'block',
+    //       type: 'colour_random',
+    //     },
+    //   ],
+    // },
     {
       kind: 'category',
       name: 'Text',
@@ -624,169 +811,17 @@ export default {
         },
       ],
     },
-    {
-      kind: 'category',
-      name: 'Lists',
-      categorystyle: 'list_category',
-      contents: [
-        {
-          type: 'lists_create_with',
-          kind: 'block',
-        },
-        {
-          type: 'lists_create_with',
-          kind: 'block',
-        },
-        {
-          type: 'lists_repeat',
-          kind: 'block',
-          inputs: {
-            NUM: {
-              shadow: {
-                type: 'math_number',
-                fields: {
-                  NUM: 5,
-                },
-              },
-            },
-          },
-        },
-        {
-          type: 'lists_length',
-          kind: 'block',
-        },
-        {
-          type: 'lists_isEmpty',
-          kind: 'block',
-        },
-        {
-          type: 'lists_indexOf',
-          kind: 'block',
 
-          fields: {
-            END: 'FIRST',
-          },
-          inputs: {
-            VALUE: {
-              block: {
-                type: 'variables_get',
-                fields: {
-                  VAR: {
-                    name: 'list',
-                  },
-                },
-              },
-            },
-          },
-        },
-        {
-          type: 'lists_getIndex',
-          kind: 'block',
-          fields: {
-            MODE: 'GET',
-            WHERE: 'FROM_START',
-          },
-          inputs: {
-            VALUE: {
-              block: {
-                type: 'variables_get',
-                fields: {
-                  VAR: {
-                    name: 'list',
-                  },
-                },
-              },
-            },
-          },
-        },
-        {
-          type: 'lists_setIndex',
-          kind: 'block',
-          fields: {
-            MODE: 'SET',
-            WHERE: 'FROM_START',
-          },
-          inputs: {
-            LIST: {
-              block: {
-                type: 'variables_get',
-                fields: {
-                  VAR: {
-                    name: 'list',
-                  },
-                },
-              },
-            },
-          },
-        },
-        {
-          type: 'lists_getSublist',
-          kind: 'block',
-          fields: {
-            WHERE1: 'FROM_START',
-            WHERE2: 'FROM_START',
-          },
-          inputs: {
-            LIST: {
-              block: {
-                type: 'variables_get',
-                fields: {
-                  VAR: {
-                    name: 'list',
-                  },
-                },
-              },
-            },
-          },
-        },
-        {
-          type: 'lists_split',
-          kind: 'block',
-
-          fields: {
-            MODE: 'SPLIT',
-          },
-          inputs: {
-            DELIM: {
-              shadow: {
-                type: 'text',
-                fields: {
-                  TEXT: ',',
-                },
-              },
-            },
-          },
-        },
-        {
-          type: 'lists_sort',
-          kind: 'block',
-
-          fields: {
-            TYPE: 'NUMERIC',
-            DIRECTION: '1',
-          },
-        },
-        {
-          type: 'lists_reverse',
-          kind: 'block',
-        },
-      ],
-    },
     {
       kind: 'sep',
     },
-    {
-      kind: 'category',
-      name: 'Variables',
-      custom: 'VARIABLE',
-      categorystyle: 'variable_category',
-    },
-    {
-      kind: 'category',
-      name: 'Functions',
-      custom: 'PROCEDURE',
-      categorystyle: 'procedure_category',
-    },
+    // {
+    //   kind: 'category',
+    //   name: 'Variables',
+    //   custom: 'VARIABLE',
+    //   categorystyle: 'variable_category',
+    // },
+
     // Add in the blocks for the p5 demo.
     {
       kind: 'category',
@@ -794,38 +829,6 @@ export default {
       contents: p5CategoryContents,
       categorystyle: 'logic_category',
     },
-    {
-      'kind': 'category',
-      'name': 'Misc',
-      'contents': [
-        {
-          kind: 'label',
-          text: 'This is a label',
-        },
-        {
-          'kind': 'category',
-          'name': 'A subcategory',
-          'contents': [
-            {
-              kind: 'label',
-              text: 'This is another label',
-            },
-            {
-              kind: 'block',
-              type: 'colour_random',
-            },
-          ],
-        },
-        {
-          'kind': 'button',
-          'text': 'This is a button',
-          'callbackKey': 'unimplemented',
-        },
-        {
-          kind: 'block',
-          type: 'colour_random',
-        },
-      ],
-    },
+
   ],
 };
