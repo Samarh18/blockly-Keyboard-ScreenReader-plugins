@@ -10,7 +10,7 @@
  */
 
 import * as Blockly from 'blockly/core';
-import {scrollBoundsIntoView} from './workspace_utilities';
+import { scrollBoundsIntoView } from './workspace_utilities';
 
 /**
  * Class for a flyout cursor.
@@ -95,7 +95,7 @@ export class FlyoutCursor extends Blockly.LineCursor {
     ) {
       bounds = location.getBoundingRectangle();
     } else if (location instanceof Blockly.FlyoutButton) {
-      const {x, y} = location.getPosition();
+      const { x, y } = location.getPosition();
       bounds = new Blockly.utils.Rect(
         y,
         y + location.height,
