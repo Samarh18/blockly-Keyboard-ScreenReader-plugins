@@ -85,6 +85,7 @@ function createWorkspace(): Blockly.WorkspaceSvg {
 
   const navigationOptions = {
     cursor: { stackConnections },
+    autoCleanup: true, // Enable auto cleanup
   };
   new KeyboardNavigation(workspace, navigationOptions);
   registerRunCodeShortcut();

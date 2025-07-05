@@ -8,16 +8,20 @@ import * as Blockly from 'blockly/core';
 import { NavigationController } from './navigation_controller';
 import { getFlyoutElement, getToolboxElement } from './workspace_utilities';
 import { GlobalShortcuts } from './global_shortcuts';
+import { AutoCleanup } from './auto_cleanup';
+
 
 
 /** Options object for KeyboardNavigation instances. */
 export interface NavigationOptions {
   cursor: Partial<Blockly.CursorOptions>;
+  autoCleanup?: boolean;
 }
 
 /** Default options for LineCursor instances. */
 const defaultOptions: NavigationOptions = {
   cursor: {},
+  autoCleanup: true,
 };
 
 
@@ -56,7 +60,10 @@ export class KeyboardNavigation {
   private cursor: Blockly.LineCursor;
 
   /** Global shortcuts handler. */
-  private globalShortcuts: GlobalShortcuts;  // <-- ADD IT HERE
+  private globalShortcuts: GlobalShortcuts;
+
+  /** Auto cleanup instance for organizing blocks automatically. */
+  private autoCleanup?: AutoCleanup;
 
 
   /**
@@ -108,6 +115,11 @@ export class KeyboardNavigation {
       this.navigationController
     );
     this.globalShortcuts.install();
+
+    // Initialize auto cleanup if enabled
+    if (options.autoCleanup !== false) {
+      this.autoCleanup = new AutoCleanup(workspace);
+    }
 
     // Ensure that only the root SVG G (group) has a tab index.
     this.injectionDivTabIndex = workspace
@@ -242,6 +254,11 @@ export class KeyboardNavigation {
    */
   dispose() {
     this.globalShortcuts.uninstall();
+
+    // Dispose auto cleanup
+    if (this.autoCleanup) {
+      this.autoCleanup.dispose();
+    }
 
     // Revert markFocused monkey patch.
     this.workspace.markFocused = this.oldMarkFocused;
