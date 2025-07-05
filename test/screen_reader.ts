@@ -659,9 +659,43 @@ export class ScreenReader {
 
     this.setupToolboxSelectionListener();
 
+    // Listen for flyout events
+    const flyout = this.workspace.getFlyout();
+    if (flyout) {
+      const flyoutWorkspace = flyout.getWorkspace();
 
+      // Check for cursor changes in the flyout workspace
+      setInterval(() => {
+        const cursor = flyoutWorkspace.getCursor();
+        if (cursor) {
+          const curNode = cursor.getCurNode();
+          if (curNode) {
+            const block = curNode.getSourceBlock();
+            if (block) {
+              // Store the last announced block ID to avoid repeating
+              if (!this.lastAnnouncedBlockId || this.lastAnnouncedBlockId !== block.id) {
+                this.lastAnnouncedBlockId = block.id;
 
-    // Add a keyboard event listener to detect Tab key navigation
+                // Cast to BlockSvg since flyout blocks are always SVG blocks
+                const blockSvg = block as Blockly.BlockSvg;
+
+                // Get position info
+                const position = this.getBlockPositionInFlyout(blockSvg);
+                const blockDescription = this.getBlockDescription(block);
+
+                if (position) {
+                  this.speak(`${position.index} of ${position.total}, ${blockDescription}`);
+                } else {
+                  this.speak(blockDescription);
+                }
+              }
+            }
+          }
+        }
+      }, 500); // Check every 500ms 
+    }
+
+    // keyboard event listener to detect Tab key navigation
     document.addEventListener('keydown', (e) => {
       // Check if Tab key was pressed
       if (e.key === 'Tab') {
@@ -1039,14 +1073,24 @@ export class ScreenReader {
   }
 
   /**
-   * Announce information about a specific block.
-   * @param block The block to announce.
-   */
+ * Announce information about a specific block.
+ * @param block The block to announce.
+ */
   public announceBlock(block: Blockly.Block): void {
     const description = this.getBlockDescription(block);
+
+    // Check if we're in the flyout
+    const blockSvg = block as Blockly.BlockSvg;
+    if (blockSvg.workspace.isFlyout) {
+      const position = this.getBlockPositionInFlyout(blockSvg);
+      if (position) {
+        this.speakHighPriority(`Selected ${position.index} of ${position.total}, ${description}`);
+        return;
+      }
+    }
+
     this.speakHighPriority(`Selected ${description}`);
   }
-
   /**
  * Enhanced getBlockDescription method to include field values
  */
@@ -1268,6 +1312,34 @@ export class ScreenReader {
   }
 
   /**
+ * Get the position of a block within the flyout
+ */
+  private getBlockPositionInFlyout(block: Blockly.BlockSvg): { index: number, total: number } | null {
+    const flyout = this.workspace.getFlyout();
+    if (!flyout) return null;
+
+    // Get all blocks in the flyout
+    const flyoutWorkspace = flyout.getWorkspace();
+    const flyoutBlocks = flyoutWorkspace.getTopBlocks(false);
+
+    // Find the current block's position
+    let currentIndex = -1;
+    for (let i = 0; i < flyoutBlocks.length; i++) {
+      if (flyoutBlocks[i].id === block.id) {
+        currentIndex = i;
+        break;
+      }
+    }
+
+    if (currentIndex === -1) return null;
+
+    return {
+      index: currentIndex + 1, // 1-based indexing for users
+      total: flyoutBlocks.length
+    };
+  }
+
+  /**
     * Enhanced speak method with intelligent interruption
     * Replace the existing speak method
     */
@@ -1432,11 +1504,23 @@ export class ScreenReader {
     const location = node.getLocation();
 
     // ALL navigation announcements should be high priority to clear pending messages
-    if (type === Blockly.ASTNode.types.BLOCK) {
-      const block = location as Blockly.Block;
+    if (type === Blockly.ASTNode.types.BLOCK || type === Blockly.ASTNode.types.STACK) {
+      const block = (type === Blockly.ASTNode.types.STACK
+        ? location
+        : location) as Blockly.BlockSvg;
+
       if (block) {
-        // Make announceBlock use high priority
         const description = this.getBlockDescription(block);
+
+        // Check if block is in flyout
+        if (block.workspace.isFlyout) {
+          const position = this.getBlockPositionInFlyout(block);
+          if (position) {
+            this.speakHighPriority(`${position.index} of ${position.total}, ${description}`);
+            return;
+          }
+        }
+
         this.speakHighPriority(`Selected ${description}`);
       } else {
         this.speakHighPriority("Unknown block");

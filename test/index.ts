@@ -22,8 +22,7 @@ import { javascriptGenerator } from 'blockly/javascript';
 // @ts-expect-error No types in js file
 import { load } from './loadTestBlocks';
 import { runCode, registerRunCodeShortcut } from './runCode';
-import { ScreenReader } from './screen_reader'; // Add this import
-
+import { ScreenReader } from './screen_reader';
 
 /**
  * Parse query params for inject and navigation options and update

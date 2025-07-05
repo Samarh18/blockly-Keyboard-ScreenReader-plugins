@@ -551,6 +551,20 @@ export default {
     //   ],
     // },
     {
+      kind: 'sep',
+    },
+
+    {
+      kind: 'category',
+      name: 'p5 blocks',
+      contents: p5CategoryContents,
+      categorystyle: 'logic_category',
+    },
+
+    {
+      kind: 'sep',
+    },
+    {
       kind: 'category',
       name: 'Text',
       categorystyle: 'text_category',
@@ -811,10 +825,6 @@ export default {
         },
       ],
     },
-
-    {
-      kind: 'sep',
-    },
     // {
     //   kind: 'category',
     //   name: 'Variables',
@@ -823,12 +833,7 @@ export default {
     // },
 
     // Add in the blocks for the p5 demo.
-    {
-      kind: 'category',
-      name: 'p5 blocks',
-      contents: p5CategoryContents,
-      categorystyle: 'logic_category',
-    },
+
 
   ],
 };
