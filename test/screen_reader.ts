@@ -50,6 +50,8 @@ export class ScreenReader {
 
     // Setup workspace cursor listener
     this.setupWorkspaceCursorListener();
+
+    this.setupFieldEditingListeners();
   }
 
 
@@ -976,6 +978,16 @@ export class ScreenReader {
   }
 
   /**
+ * Enhanced field editing announcements for screen_reader.ts
+ */
+  private fieldEditingListeners: Map<string, {
+    input: HTMLInputElement;
+    lastValue: string;
+    keydownListener: (e: KeyboardEvent) => void;
+    inputListener: (e: Event) => void;
+  }> = new Map();
+
+  /**
    * Set up an interval to check for workspace cursor movements
    */
   private setupWorkspaceCursorListener(): void {
@@ -1587,6 +1599,8 @@ export class ScreenReader {
   public dispose(): void {
     this.debugLog('Disposing screen reader...');
 
+    this.disposeFieldEditingListeners();
+
     if (this.cursorInterval) {
       clearInterval(this.cursorInterval);
       this.cursorInterval = null;
@@ -1624,5 +1638,235 @@ export class ScreenReader {
       }, 200);
     }
   }
+
+  /**
+ * Set up field editing listeners for text and number inputs
+ */
+  private setupFieldEditingListeners(): void {
+    this.debugLog('Setting up field editing listeners...');
+
+    // Use MutationObserver to detect when Blockly input fields are created
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        mutation.addedNodes.forEach((node) => {
+          if (node instanceof HTMLElement) {
+            // Look for Blockly input fields
+            const inputs = node.querySelectorAll('input[type="text"], input[type="number"]');
+            inputs.forEach((input) => {
+              if (input instanceof HTMLInputElement &&
+                input.classList.contains('blocklyHtmlInput')) {
+                this.attachFieldEditingListener(input);
+              }
+            });
+
+            // Also check if the node itself is an input
+            if (node instanceof HTMLInputElement &&
+              node.classList.contains('blocklyHtmlInput')) {
+              this.attachFieldEditingListener(node);
+            }
+          }
+        });
+      });
+    });
+
+    // Start observing the document for new input fields
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+  }
+
+  /**
+   * Attach editing listeners to a specific input field
+   */
+  private attachFieldEditingListener(input: HTMLInputElement): void {
+    const inputId = this.generateInputId(input);
+
+    // Don't attach if already attached
+    if (this.fieldEditingListeners.has(inputId)) {
+      return;
+    }
+
+    this.debugLog(`Attaching field editing listener to input: ${inputId}`);
+
+    let lastValue = input.value;
+    let isBackspaceOrDelete = false;
+
+    const keydownListener = (e: KeyboardEvent) => {
+      // Track if backspace or delete was pressed
+      isBackspaceOrDelete = e.key === 'Backspace' || e.key === 'Delete';
+      lastValue = input.value;
+    };
+
+    const inputListener = (e: Event) => {
+      const currentValue = input.value;
+      this.announceFieldChange(lastValue, currentValue, isBackspaceOrDelete);
+      lastValue = currentValue;
+      isBackspaceOrDelete = false;
+    };
+
+    // Store listeners for cleanup
+    this.fieldEditingListeners.set(inputId, {
+      input,
+      lastValue,
+      keydownListener,
+      inputListener
+    });
+
+    // Attach listeners
+    input.addEventListener('keydown', keydownListener);
+    input.addEventListener('input', inputListener);
+
+    // Clean up when input loses focus or is removed
+    const cleanupListener = () => {
+      this.removeFieldEditingListener(inputId);
+    };
+
+    input.addEventListener('blur', cleanupListener);
+    input.addEventListener('remove', cleanupListener);
+  }
+
+  /**
+   * Generate a unique ID for an input field
+   */
+  private generateInputId(input: HTMLInputElement): string {
+    return `field_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  /**
+   * Announce the character that was added or removed from a field
+   */
+  private announceFieldChange(oldValue: string, newValue: string, wasDelete: boolean): void {
+    this.debugLog(`Field change: "${oldValue}" -> "${newValue}", wasDelete: ${wasDelete}`);
+
+    // Handle deletion
+    if (newValue.length < oldValue.length) {
+      const deletedChars = oldValue.slice(newValue.length);
+      for (const char of deletedChars) {
+        const announcement = this.getCharacterAnnouncement(char);
+        this.speakHighPriority(`Deleted ${announcement}`);
+      }
+      return;
+    }
+
+    // Handle addition
+    if (newValue.length > oldValue.length) {
+      const addedChars = newValue.slice(oldValue.length);
+      for (const char of addedChars) {
+        const announcement = this.getCharacterAnnouncement(char);
+        this.speakHighPriority(announcement);
+      }
+      return;
+    }
+
+    // Handle replacement (same length but different content)
+    if (oldValue !== newValue && oldValue.length === newValue.length) {
+      // Find the changed character
+      for (let i = 0; i < newValue.length; i++) {
+        if (oldValue[i] !== newValue[i]) {
+          const announcement = this.getCharacterAnnouncement(newValue[i]);
+          this.speakHighPriority(announcement);
+          break;
+        }
+      }
+    }
+  }
+
+  /**
+   * Get the screen reader announcement for a character
+   */
+  private getCharacterAnnouncement(char: string): string {
+    // Numbers
+    const numbers: { [key: string]: string } = {
+      '0': 'zero',
+      '1': 'one',
+      '2': 'two',
+      '3': 'three',
+      '4': 'four',
+      '5': 'five',
+      '6': 'six',
+      '7': 'seven',
+      '8': 'eight',
+      '9': 'nine'
+    };
+
+    // Special characters
+    const specialChars: { [key: string]: string } = {
+      '.': 'dot',
+      ',': 'comma',
+      '-': 'minus',
+      '+': 'plus',
+      ' ': 'space',
+      '(': 'left parenthesis',
+      ')': 'right parenthesis',
+      '[': 'left bracket',
+      ']': 'right bracket',
+      '{': 'left brace',
+      '}': 'right brace',
+      '=': 'equals',
+      '<': 'less than',
+      '>': 'greater than',
+      '/': 'slash',
+      '\\': 'backslash',
+      '*': 'asterisk',
+      '%': 'percent',
+      '#': 'hash',
+      '@': 'at',
+      '&': 'ampersand',
+      '!': 'exclamation',
+      '?': 'question mark',
+      ':': 'colon',
+      ';': 'semicolon',
+      '"': 'quote',
+      "'": 'apostrophe',
+      '`': 'backtick',
+      '~': 'tilde',
+      '^': 'caret',
+      '_': 'underscore',
+      '|': 'pipe'
+    };
+
+    // Check if it's a number
+    if (numbers[char]) {
+      return numbers[char];
+    }
+
+    // Check if it's a special character
+    if (specialChars[char]) {
+      return specialChars[char];
+    }
+
+    // For letters, just return the letter (screen readers handle these well)
+    if (/[a-zA-Z]/.test(char)) {
+      return char.toLowerCase();
+    }
+
+    // For anything else, return the character itself
+    return char;
+  }
+
+  /**
+   * Remove field editing listener for a specific input
+   */
+  private removeFieldEditingListener(inputId: string): void {
+    const listener = this.fieldEditingListeners.get(inputId);
+    if (listener) {
+      listener.input.removeEventListener('keydown', listener.keydownListener);
+      listener.input.removeEventListener('input', listener.inputListener);
+      this.fieldEditingListeners.delete(inputId);
+      this.debugLog(`Removed field editing listener: ${inputId}`);
+    }
+  }
+
+  /**
+   * Clean up all field editing listeners (call this in dispose())
+   */
+  private disposeFieldEditingListeners(): void {
+    this.fieldEditingListeners.forEach((listener, inputId) => {
+      this.removeFieldEditingListener(inputId);
+    });
+    this.fieldEditingListeners.clear();
+  }
+
 
 }
