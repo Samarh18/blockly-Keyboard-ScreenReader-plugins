@@ -73,6 +73,29 @@ export class GlobalShortcuts {
                 e.stopPropagation();
                 this.focusWorkspace();
                 break;
+
+            case 's':
+                e.preventDefault();
+                e.stopPropagation();
+                this.focusSettingsButton();
+                break;
+        }
+    }
+
+    /**
+ * Find and focus the settings button.
+ */
+    private focusSettingsButton() {
+        // Find button by ID
+        const settingsButton = document.getElementById('settings-button');
+
+        if (settingsButton instanceof HTMLElement) {
+            settingsButton.focus();
+
+            // Optionally scroll into view if the button is not visible
+            settingsButton.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        } else {
+            console.warn('Could not find Settings button with id="settings-button"');
         }
     }
 

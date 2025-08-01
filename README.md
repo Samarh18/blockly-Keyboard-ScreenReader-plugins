@@ -18,7 +18,7 @@ A working demonstration of this accessibility implementation is available at: [h
 - **R**: Focus the "Run Code!" button  
 - **W**: Focus the workspace for block editing
 
-### Workspace Shortcuts (Work only when focusing on the workspace)
+#### Workspace Shortcuts (Work only when focusing on the workspace)
 - **C**: Clean up workspace (organize blocks automatically)
 - **D**: Delete all blocks from workspace
 - **Auto-cleanup**: Workspace automatically organizes when blocks are added or removed 
@@ -27,6 +27,38 @@ A working demonstration of this accessibility implementation is available at: [h
 - **Arrow Keys**: Navigate between blocks, connections, and fields
 - **Enter**: Activate the current selection (open dropdowns, edit fields)
 - **Escape**: Exit current context (close menus, return to workspace)
+
+#### Screen Reader Settings
+
+The accessibility demo includes a customizable settings window to personalize your screen reader experience. Access it by pressing **S** which will focus on the "Settings" button, and then pressing "Enter" will open the window, or clicking the button directly.
+
+
+##### Available Settings
+
+**Enable Screen Reader Checkbox**
+- **Default**: Enabled
+- **Function**: Turn all screen reader announcements on or off
+- **Interaction**: Press **Space** to toggle on/off
+
+**Speech Rate Slider**
+- **Default**: 1.7
+- **Function**: Controls how fast speech is spoken
+- **Interaction**: Use **left/right arrow keys** to adjust
+
+**Speech Pitch Slider**
+- **Default**: 1.0
+- **Function**: Controls the pitch/tone of speech
+- **Interaction**: Use **left/right arrow keys** to adjust
+
+**Speech Volume Slider**
+- **Default**: 1.0
+- **Function**: Controls how loud speech is
+- **Interaction**: Use **left/right arrow keys** to adjust
+
+**Voice Selection Dropdown menu**
+- **Default**: System default voice
+- **Function**: Choose which voice to use for speech
+- **Interaction**: Use **up/down arrow keys** to browse voices
 
 ### Toolbox/Blocks Menu Navigation
 

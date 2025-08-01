@@ -24,6 +24,8 @@ import { load } from './loadTestBlocks';
 import { runCode, registerRunCodeShortcut } from './runCode';
 import { ScreenReader } from './screen_reader';
 
+import { SettingsDialog } from './settings_dialog';
+
 /**
  * Parse query params for inject and navigation options and update
  * the fields on the options form to match.
@@ -87,14 +89,19 @@ function createWorkspace(): Blockly.WorkspaceSvg {
     cursor: { stackConnections },
     autoCleanup: true, // Enable auto cleanup
   };
+
   new KeyboardNavigation(workspace, navigationOptions);
   registerRunCodeShortcut();
 
   // Initialize screen reader
-  new ScreenReader(workspace);
+  const screenReader = new ScreenReader(workspace);  // Store reference
 
-  // Disable blocks that aren't inside the setup or draw loops.
-  //workspace.addChangeListener(Blockly.Events.disableOrphans);
+  // Initialize settings dialog and register shortcut
+  const settingsDialog = new SettingsDialog(screenReader);
+  settingsDialog.install();
+
+  // Expose globally for global shortcuts access
+  (window as any).settingsDialog = settingsDialog;
 
   load(workspace, scenario);
   runCode();

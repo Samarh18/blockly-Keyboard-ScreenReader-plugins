@@ -7,6 +7,8 @@
 import * as Blockly from 'blockly';
 import { getToolboxElement, getFlyoutElement } from '../src/workspace_utilities';
 import { getBlockMessage } from './block_descriptions';
+import { SpeechSettings } from './settings_dialog';
+
 /**
  * A simple screen reader implementation for Blockly that announces actions.
  */
@@ -16,7 +18,8 @@ export class ScreenReader {
   private cursorInterval: number | null = null;
   private lastWorkspaceNodeId: string | null = null;
   private isSpeaking: boolean = false;
-  private debugMode: boolean = true; // Enable debug logging
+  private debugMode: boolean = true;
+  private isEnabled: boolean = true;
 
   private menuObservers?: {
     menuObserver: MutationObserver | null;
@@ -32,6 +35,9 @@ export class ScreenReader {
   private hasLeftWorkspace: boolean = false;
 
   private isDeletingAll: boolean = false;
+  private settings: SpeechSettings;
+  private selectedVoice: SpeechSynthesisVoice | null = null;
+
 
 
   /**
@@ -48,10 +54,67 @@ export class ScreenReader {
     // Initialize all event listeners
     this.initEventListeners();
 
+    this.settings = this.loadSettings();
+    this.applyVoiceSettings();
+
     // Setup workspace cursor listener
     this.setupWorkspaceCursorListener();
 
     this.setupFieldEditingListeners();
+  }
+
+  /**
+   * Load settings from localStorage with defaults
+   */
+  private loadSettings(): SpeechSettings {
+    const saved = localStorage.getItem('blockly-screenreader-settings');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.warn('Failed to parse saved settings, using defaults');
+      }
+    }
+
+    return this.getDefaultSettings();
+  }
+
+  /**
+   * Get default settings
+   */
+  private getDefaultSettings(): SpeechSettings {
+    return {
+      enabled: true,
+      rate: 1.7,
+      pitch: 1.0,
+      volume: 1.0,
+      voiceIndex: 0
+    };
+  }
+
+  /**
+   * Apply voice settings
+   */
+  private applyVoiceSettings(): void {
+    const voices = window.speechSynthesis.getVoices();
+    this.selectedVoice = voices[this.settings.voiceIndex] || voices[0] || null;
+  }
+
+  /**
+   * Update settings (called from settings dialog)
+   */
+  public updateSettings(newSettings: SpeechSettings): void {
+    this.settings = { ...newSettings };
+    this.setEnabled(newSettings.enabled);
+    this.applyVoiceSettings();
+  }
+
+  /**
+   * Test speech settings with a message
+   */
+  public testSpeechSettings(message: string): void {
+    // Force speak the test message with current settings
+    this.forceSpeek(message);
   }
 
 
@@ -68,14 +131,15 @@ export class ScreenReader {
         window.speechSynthesis.onvoiceschanged = () => {
           voices = window.speechSynthesis.getVoices();
           this.debugLog(`Loaded ${voices.length} voices`);
+          this.applyVoiceSettings(); // Apply voice settings after voices load
           this.testSpeechAfterVoicesLoaded();
         };
       } else {
+        this.applyVoiceSettings(); // Apply voice settings immediately
         this.testSpeechAfterVoicesLoaded();
       }
     }
   }
-
   /**
    * Test speech after voices are loaded
    */
@@ -1365,6 +1429,10 @@ export class ScreenReader {
       return;
     }
 
+    if (!this.isEnabled) {
+      return; // Don't speak if disabled
+    }
+
     // If there's a pending interruption, clear it
     if (this.interruptionTimer) {
       clearTimeout(this.interruptionTimer);
@@ -1436,16 +1504,21 @@ export class ScreenReader {
     try {
       const utterance = new SpeechSynthesisUtterance(message);
 
-      // Set properties for better screen reader experience
-      utterance.rate = 1.7;
-      utterance.pitch = 1.0;
-      utterance.volume = 1.0;
+      // Use current settings instead of hardcoded values
+      utterance.rate = this.settings.rate;
+      utterance.pitch = this.settings.pitch;
+      utterance.volume = this.settings.volume;
+
+      // Apply selected voice if available
+      if (this.selectedVoice) {
+        utterance.voice = this.selectedVoice;
+      }
 
       // Track the current utterance and start time
       this.currentUtterance = utterance;
       this.utteranceStartTime = Date.now();
 
-      // Add event listeners
+      // Add event listeners (existing code)
       utterance.onstart = () => {
         this.debugLog(`Speech started: "${message}"`);
         this.isSpeaking = true;
@@ -1482,6 +1555,10 @@ export class ScreenReader {
   * Update the existing forceSpeek method
   */
   public forceSpeek(message: string): void {
+    if (!this.isEnabled) {
+      this.debugLog(`Force speech blocked - screen reader disabled: "${message}"`);
+      return; // Don't speak if disabled
+    }
     if ('speechSynthesis' in window) {
       // Clear any pending interruptions
       if (this.interruptionTimer) {
@@ -1504,7 +1581,7 @@ export class ScreenReader {
   /**
    * Announce a high-priority message (interrupts more aggressively)
    */
-  private speakHighPriority(message: string): void {
+  public speakHighPriority(message: string): void {
     this.speak(message, 'high');
   }
 
@@ -1591,6 +1668,28 @@ export class ScreenReader {
     } else {
       this.speakHighPriority(`Unknown element type: ${type}`);
     }
+  }
+
+  /**
+ * Enable or disable the screen reader
+ */
+  public setEnabled(enabled: boolean): void {
+    this.isEnabled = enabled;
+    if (!enabled) {
+      // Cancel any pending speech when disabled
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+      this.currentUtterance = null;
+      this.pendingMessage = null;
+    }
+  }
+
+  /**
+   * Check if screen reader is enabled before speaking
+   */
+  public isScreenReaderEnabled(): boolean {
+    return this.isEnabled;
   }
 
   /**

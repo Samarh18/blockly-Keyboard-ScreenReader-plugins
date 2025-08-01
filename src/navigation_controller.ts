@@ -12,6 +12,8 @@
 
 import './gesture_monkey_patch';
 import './toolbox_monkey_patch';
+import { SettingsDialog } from '../test/settings_dialog';
+
 
 import * as Blockly from 'blockly/core';
 import {
@@ -90,6 +92,8 @@ export class NavigationController {
   private lastToolboxLetter = '';
   private lastToolboxLetterTime = 0;
   private currentToolboxLetterIndex = 0;
+
+  settingsDialog: SettingsDialog | null = null;
 
   // Add the method here, before init()
   /**
@@ -407,6 +411,21 @@ export class NavigationController {
           KeyCodes.P,  // 80 - p5 blocks
         ],
       },
+
+      /** Open settings dialog */
+      openSettings: {
+        name: 'OPEN_SETTINGS',
+        preconditionFn: (workspace) => true,
+        callback: (workspace) => {
+          if (this.settingsDialog) {
+            this.settingsDialog.toggle();
+            return true;
+          }
+          return false;
+        },
+        keyCodes: [KeyCodes.S],
+      },
+
     };
 
   /**
@@ -462,5 +481,10 @@ export class NavigationController {
     }
     this.removeShortcutHandlers();
     this.navigation.dispose();
+    if (this.settingsDialog) {
+      this.settingsDialog.uninstall();
+      this.settingsDialog = null;
+    }
+
   }
 }
