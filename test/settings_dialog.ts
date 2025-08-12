@@ -481,7 +481,7 @@ export class SettingsDialog {
       // CATCH ARROW KEYS BEFORE BROWSER HANDLES THEM
       voiceSelect.addEventListener('keydown', (e) => {
         if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-          console.log('🔴 Arrow key intercepted:', e.key);
+          console.log('Arrow key intercepted:', e.key);
 
           // Calculate what the new index will be
           let newIndex = voiceSelect.selectedIndex;
@@ -500,7 +500,7 @@ export class SettingsDialog {
           const selectedVoice = voices[newIndex];
           if (selectedVoice) {
             const voiceName = selectedVoice.name;
-            console.log('🔴 Announcing immediately:', voiceName);
+            console.log('Announcing immediately:', voiceName);
             this.screenReader.speakHighPriority(voiceName);
 
             // Update settings immediately too
@@ -515,24 +515,24 @@ export class SettingsDialog {
 
       // Keep INPUT event as backup (for mouse clicks, etc.)
       voiceSelect.addEventListener('input', (e) => {
-        console.log('🟢 INPUT event fired (backup)');
+        console.log(' INPUT event fired (backup)');
         const voices = this.getAvailableVoices();
         const selectedVoice = voices[voiceSelect.selectedIndex];
 
         if (selectedVoice) {
           const voiceName = selectedVoice.name;
-          console.log('🟢 Backup announcement:', voiceName);
+          console.log('Backup announcement:', voiceName);
           this.screenReader.speakHighPriority(voiceName);
         }
       });
 
       // Keep CHANGE event for final confirmation
       voiceSelect.addEventListener('change', (e) => {
-        console.log('🔵 CHANGE event fired');
+        console.log('CHANGE event fired');
         const value = parseInt((e.target as HTMLSelectElement).value);
         this.currentSettings.voiceIndex = value;
         this.applySettingsPreview();
-        console.log('🔵 Settings confirmed for voice index:', value);
+        console.log(' Settings confirmed for voice index:', value);
       });
 
     } else {
