@@ -38,21 +38,36 @@ export class HelpDialog {
   }
 
   /**
-   * Open help dialog automatically on first visit
-   */
+     * Open help dialog automatically on page load (forced every time)
+     */
   autoOpenOnFirstVisit() {
-    if (!this.hasOpenedBefore) {
-      // Delay to ensure page is fully loaded
-      setTimeout(() => {
-        this.toggle();
-        // Mark as opened
-        localStorage.setItem('help-dialog-opened', 'true');
-        this.hasOpenedBefore = true;
+    // Force open every time 
+    console.log('HelpDialog: Force opening dialog on page load');
 
-        // IMPORTANT: Enable speech synthesis after user interaction
-        this.enableSpeechAfterUserInteraction();
-      }, 1000);
-    }
+    // Delay to ensure page is fully loaded
+    setTimeout(() => {
+      console.log('HelpDialog: Attempting to open help dialog');
+
+      if (!this.outputDiv) {
+        console.error('HelpDialog: outputDiv is null, cannot open dialog');
+        return;
+      }
+
+      if (!this.modalContainer || !this.helpDialog) {
+        console.error('HelpDialog: Modal elements not created, calling createModalContent');
+        this.createModalContent();
+      }
+
+      this.toggle();
+
+      // Mark as opened
+      localStorage.setItem('help-dialog-opened', 'true');
+      this.hasOpenedBefore = true;
+      console.log('HelpDialog: Marked as opened in localStorage');
+
+      // IMPORTANT: Enable speech synthesis after user interaction
+      this.enableSpeechAfterUserInteraction();
+    }, 1500); // Increased delay to 1.5 seconds
   }
 
   /**
@@ -66,8 +81,8 @@ export class HelpDialog {
 
     // Now test with actual speech
     setTimeout(() => {
-      this.screenReader.testSpeechSettings('Speech synthesis is now enabled. Help dialog opened automatically on first visit.');
-    }, 100);
+      // this.screenReader.testSpeechSettings('Speech synthesis is now enabled. Help dialog opened automatically on first visit.');
+    }, 10);
   }
 
   /**
@@ -108,7 +123,7 @@ export class HelpDialog {
    */
   createModalContent() {
     const modalContents = `
-    <div class="modal-container">
+    <div class="modal-container" id="help">
       <dialog class="help-modal">
         <div class="help-container" tabindex="0">
           <div class="header">
@@ -138,7 +153,9 @@ export class HelpDialog {
               <h2 tabindex="0">Workspace Shortcuts (Work only when focusing on workspace)</h2>
               <p tabindex="0"><strong>C key</strong> - Clean up workspace and organize blocks automatically</p>
               <p tabindex="0"><strong>D key</strong> - Delete all blocks from workspace</p>
+              <p tabindex="0"><strong>O key</strong> - Navigate to root block of current stack</p>
               <p tabindex="0"><strong>Auto-cleanup:</strong> Workspace automatically organizes when blocks are added or removed</p>
+              <p tabindex="0"><strong>N key</strong> - Navigate to next stack of blocks</p>
             </div>
 
             <div class="help-section">

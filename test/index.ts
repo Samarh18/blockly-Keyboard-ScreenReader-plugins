@@ -91,6 +91,8 @@ function createWorkspace(): Blockly.WorkspaceSvg {
       cursor: { stackConnections },
       autoCleanup: true,
     },
+
+
     screenReader: {
       enabled: true, // Enable screen reader by default
     },

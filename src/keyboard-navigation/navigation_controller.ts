@@ -13,6 +13,8 @@
 import './gesture_monkey_patch';
 import './toolbox_monkey_patch';
 import { SettingsDialog } from '../screen-reader/settings_dialog';
+import { RootNavigationAction } from './actions/root_navigation';
+import { StackNavigationAction } from './actions/stack_navigation_action';
 
 import * as Blockly from 'blockly/core';
 import {
@@ -79,6 +81,12 @@ export class NavigationController {
   actionMenu: ActionMenu = new ActionMenu(this.navigation);
 
   moveActions = new MoveActions(this.mover);
+
+  /** Root navigation action for O key. */
+  rootNavigationAction: RootNavigationAction = new RootNavigationAction(this.navigation);
+
+  /** Stack navigation action for N/Shift+N keys. */
+  stackNavigationAction: StackNavigationAction = new StackNavigationAction(this.navigation);
 
   /**
    * Original Toolbox.prototype.onShortcut method, saved by
@@ -455,6 +463,9 @@ export class NavigationController {
     // to be done separately rather at construction, as many shortcuts
     // are not registered at that point.
     this.shortcutDialog.createModalContent();
+
+    this.rootNavigationAction.install();
+    this.stackNavigationAction.install();
   }
 
   /**
@@ -474,6 +485,8 @@ export class NavigationController {
     this.undoRedoAction.uninstall();
     this.actionMenu.uninstall();
     this.shortcutDialog.uninstall();
+    this.rootNavigationAction.uninstall();
+    this.stackNavigationAction.uninstall();
 
     for (const shortcut of Object.values(this.shortcuts)) {
       ShortcutRegistry.registry.unregister(shortcut.name);
