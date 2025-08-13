@@ -4,7 +4,7 @@ This experimental project aims to enhance the accessibility of Blockly by combin
 
 ## Demo
 
-A working demonstration of this accessibility implementation is available at: [https://Samarh18.github.io/blockly-Keyboard-ScreenReader-plugins/](tps://Samarh18.github.io/blockly-Keyboard-ScreenReader-plugins/)
+A working demonstration of this accessibility implementation is available at: [https://samarh18.github.io/blockly-Keyboard-ScreenReader-plugins/](https://samarh18.github.io/blockly-Keyboard-ScreenReader-plugins/)
 
 ## Keyboard Shortcuts
 
