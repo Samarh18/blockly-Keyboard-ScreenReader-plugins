@@ -36,25 +36,24 @@ jobs:
           cache: 'npm'
       
       - name: Install dependencies
-        run: npm ci
+        run: npm install
       
-      - name: Build project
-        run: npm run build
-      
-      - name: Copy test files for demo
+      - name: Build project (if build script exists)
         run: |
-          mkdir -p ./dist
-          cp -r ./test/* ./dist/
-          # Make sure index.html is in the root
-          if [ -f "./test/index.html" ]; then
-            cp ./test/index.html ./dist/index.html
+          if npm run | grep -q "build"; then
+            npm run build
+          else
+            echo "No build script found, skipping build step"
           fi
+      
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
       
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # Upload dist folder
-          path: './dist'
+          # Upload test folder which contains your demo
+          path: './test'
           
   deploy:
     environment:
