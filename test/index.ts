@@ -8,7 +8,10 @@ import * as Blockly from 'blockly';
 // Import the default blocks.
 import 'blockly/blocks';
 import { installAllBlocks as installColourBlocks } from '@blockly/field-colour';
-import { KeyboardNavigation } from '../src/index';
+
+// Import the new integrated accessibility demo
+import { AccessibilityDemo } from '../src/integration';
+
 // @ts-expect-error No types in js file
 import { forBlock } from './blocks/p5_generators';
 // @ts-expect-error No types in js file
@@ -22,9 +25,6 @@ import { javascriptGenerator } from 'blockly/javascript';
 // @ts-expect-error No types in js file
 import { load } from './loadTestBlocks';
 import { runCode, registerRunCodeShortcut } from './runCode';
-import { ScreenReader } from './screen_reader';
-
-import { SettingsDialog } from './settings_dialog';
 
 /**
  * Parse query params for inject and navigation options and update
@@ -68,7 +68,7 @@ function getOptions() {
 
 /**
  * Create the workspace, including installing keyboard navigation and
- * change listeners.
+ * screen reader functionality.
  *
  * @returns The created workspace.
  */
@@ -85,24 +85,21 @@ function createWorkspace(): Blockly.WorkspaceSvg {
   }
   const workspace = Blockly.inject(blocklyDiv, injectOptions);
 
-  const navigationOptions = {
-    cursor: { stackConnections },
-    autoCleanup: true, // Enable auto cleanup
-  };
+  // Use the integrated accessibility demo instead of separate plugins
+  const accessibilityDemo = new AccessibilityDemo(workspace, {
+    keyboard: {
+      cursor: { stackConnections },
+      autoCleanup: true,
+    },
+    screenReader: {
+      enabled: true, // Enable screen reader by default
+    },
+  });
 
-  new KeyboardNavigation(workspace, navigationOptions);
+  // Register the run code shortcut
   registerRunCodeShortcut();
 
-  // Initialize screen reader
-  const screenReader = new ScreenReader(workspace);  // Store reference
-
-  // Initialize settings dialog and register shortcut
-  const settingsDialog = new SettingsDialog(screenReader);
-  settingsDialog.install();
-
-  // Expose globally for global shortcuts access
-  (window as any).settingsDialog = settingsDialog;
-
+  // Load the initial blocks
   load(workspace, scenario);
   runCode();
 

@@ -5,7 +5,7 @@
   <meta charset="utf-8" />
   <title>Blockly Plugin Test</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" />
   <link rel="stylesheet"
     href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
   <style>
@@ -71,49 +71,94 @@
       border-left: 1px solid #ddd;
     }
 
-    /* Run button styling */
+    /* Run button styling - larger and bolder */
     #run {
-      margin-bottom: 10px;
-      padding: 10px 20px;
-      font-size: 16px;
+      margin-bottom: 12px;
+      padding: 14px 24px;
+      font-size: 18px;
+      font-weight: 700;
       background-color: #4CAF50;
       color: white;
-      border: none;
-      border-radius: 4px;
+      border: 2px solid #4CAF50;
+      border-radius: 6px;
       cursor: pointer;
-      transition: background-color 0.3s;
+      transition: all 0.3s;
+      width: 100%;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
 
     #run:hover {
       background-color: #45a049;
+      border-color: #45a049;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     }
 
     #run:focus {
-      outline: 3px solid #ffa200;
+      outline: 4px solid #ff6600;
       outline-offset: 2px;
+      background-color: #45a049;
     }
 
-    /* Settings button styling - similar to run button */
+    /* Settings button styling - larger and bolder */
     #settings-button {
-      margin-bottom: 10px;
-      padding: 8px 16px;
-      font-size: 14px;
+      margin-bottom: 12px;
+      padding: 12px 20px;
+      font-size: 18px;
+      font-weight: 700;
       background-color: #2196F3;
       color: white;
-      border: none;
-      border-radius: 4px;
+      border: 2px solid #2196F3;
+      border-radius: 6px;
       cursor: pointer;
-      transition: background-color 0.3s;
+      transition: all 0.3s;
       width: 100%;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
 
     #settings-button:hover {
       background-color: #1976D2;
+      border-color: #1976D2;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     }
 
     #settings-button:focus {
-      outline: 3px solid #ffa200;
+      outline: 4px solid #ff6600;
       outline-offset: 2px;
+      background-color: #1976D2;
+    }
+
+    /* Help button styling - larger and bolder */
+    #help-button {
+      margin-bottom: 12px;
+      padding: 12px 20px;
+      font-size: 18px;
+      font-weight: 700;
+      background-color: #9C27B0;
+      color: white;
+      border: 2px solid #9C27B0;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.3s;
+      width: 100%;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    #help-button:hover {
+      background-color: #7B1FA2;
+      border-color: #7B1FA2;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    #help-button:focus {
+      outline: 4px solid #ff6600;
+      outline-offset: 2px;
+      background-color: #7B1FA2;
     }
 
     #output {
@@ -171,25 +216,39 @@
       #blocklyDiv {
         height: 60vh;
       }
+
+      /* Make buttons slightly smaller on mobile but still accessible */
+      #run {
+        font-size: 18px;
+        padding: 12px 20px;
+      }
+
+      #settings-button,
+      #help-button {
+        font-size: 14px;
+        padding: 10px 18px;
+      }
     }
   </style>
 </head>
 
 <body>
   <div id="root">
-    <!-- Blockly will inject the toolbox as the first child automatically when configured with toolboxPosition: 'start' -->
-    <!-- Workspace in the middle -->
     <div id="blocklyDiv"></div>
-    <!-- Output pane on the right -->
     <div id="outputPane">
+      <!-- NEW ORDER: Run, Settings, Help -->
       <button id="run">Run Code!</button>
       <button id="settings-button">Settings</button>
+      <button id="help-button">Help</button>
+
       <div id="output">
         <div id="p5output"></div>
       </div>
     </div>
+
     <div id="shortcuts"></div>
     <div id="settings"></div>
+    <div id="help"></div>
   </div>
 
   <script>
@@ -203,6 +262,18 @@
             window.settingsDialog.toggle();
           } else {
             console.warn('Settings dialog not available yet');
+          }
+        });
+      }
+
+      // Add event listener for help button
+      const helpButton = document.getElementById('help-button');
+      if (helpButton) {
+        helpButton.addEventListener('click', () => {
+          if (window.helpDialog && window.helpDialog.toggle) {
+            window.helpDialog.toggle();
+          } else {
+            console.warn('Help dialog not available yet');
           }
         });
       }

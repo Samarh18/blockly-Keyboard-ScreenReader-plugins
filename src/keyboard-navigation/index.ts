@@ -10,8 +10,6 @@ import { getFlyoutElement, getToolboxElement } from './workspace_utilities';
 import { GlobalShortcuts } from './global_shortcuts';
 import { AutoCleanup } from './auto_cleanup';
 
-
-
 /** Options object for KeyboardNavigation instances. */
 export interface NavigationOptions {
   cursor: Partial<Blockly.CursorOptions>;
@@ -24,11 +22,8 @@ const defaultOptions: NavigationOptions = {
   autoCleanup: true,
 };
 
-
-
 /** Plugin for keyboard navigation. */
 export class KeyboardNavigation {
-
   /** The workspace. */
   protected workspace: Blockly.WorkspaceSvg;
 
@@ -64,7 +59,6 @@ export class KeyboardNavigation {
 
   /** Auto cleanup instance for organizing blocks automatically. */
   private autoCleanup?: AutoCleanup;
-
 
   /**
    * These fields are used to preserve the workspace's initial state to restore
@@ -131,7 +125,6 @@ export class KeyboardNavigation {
       .getAttribute('tabindex');
     // We add a focus listener below so use -1 so it doesn't become focusable.
     workspace.getParentSvg().setAttribute('tabindex', '-1');
-
 
     // Move the flyout for logical tab order.
     const flyoutElement = getFlyoutElement(workspace);
@@ -365,3 +358,8 @@ export class KeyboardNavigation {
     return true;
   }
 }
+
+// Export additional classes that might be needed independently
+export { NavigationController } from './navigation_controller';
+export { AutoCleanup } from './auto_cleanup';
+export { GlobalShortcuts } from './global_shortcuts';

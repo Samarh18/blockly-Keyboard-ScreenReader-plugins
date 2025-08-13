@@ -8,7 +8,7 @@ import * as Blockly from 'blockly/core';
 import { NavigationController } from './navigation_controller';
 
 /**
- * Global shortcut handler that works anywhere on the page.
+ * Enhanced global shortcut handler with proper tab order management.
  */
 export class GlobalShortcuts {
     private workspace: Blockly.WorkspaceSvg;
@@ -21,16 +21,18 @@ export class GlobalShortcuts {
     ) {
         this.workspace = workspace;
         this.navigationController = navigationController;
-
         this.globalKeyHandler = this.handleGlobalKeypress.bind(this);
     }
 
     /**
-     * Install global keyboard listeners.
+     * Install global keyboard listeners with tab order management.
      */
     install() {
         // Use capture phase to intercept before other handlers
         document.addEventListener('keydown', this.globalKeyHandler, true);
+
+        // Set up proper tab order management
+        this.setupTabOrderManagement();
     }
 
     /**
@@ -39,6 +41,63 @@ export class GlobalShortcuts {
     uninstall() {
         document.removeEventListener('keydown', this.globalKeyHandler, true);
     }
+
+
+    /**
+     * Set up tab order management between Help button and toolbox
+     */
+    private setupTabOrderManagement() {
+        const helpButton = document.getElementById('help-button');
+        const toolboxElement = this.getToolboxElement();
+
+        if (helpButton && toolboxElement) {
+            // When leaving Help button with Tab
+            helpButton.addEventListener('keydown', (e) => {
+                if (e.key === 'Tab' && !e.shiftKey) {
+                    e.preventDefault();
+                    this.focusToolbox();
+                }
+            });
+
+            // When leaving toolbox with Shift+Tab
+            toolboxElement.addEventListener('keydown', (e) => {
+                if (e.key === 'Tab' && e.shiftKey) {
+                    e.preventDefault();
+                    helpButton.focus();
+                }
+            });
+        }
+    }
+
+    /**
+     * Get the toolbox element for focus management
+     */
+    private getToolboxElement(): HTMLElement | null {
+        const toolbox = this.workspace.getToolbox();
+        if (toolbox instanceof Blockly.Toolbox) {
+            return toolbox.HtmlDiv?.querySelector('.blocklyToolboxCategoryGroup') as HTMLElement | null;
+        }
+        return null;
+    }
+
+    /**
+     * Focus the toolbox and enable keyboard navigation if needed
+     */
+    private focusToolbox() {
+        // Enable keyboard navigation if not already enabled
+        if (!this.workspace.keyboardAccessibilityMode) {
+            this.navigationController.enable(this.workspace);
+        }
+
+        // Focus the toolbox
+        if (this.workspace.getToolbox()) {
+            this.navigationController.focusToolbox(this.workspace);
+        } else {
+            // If no toolbox, try flyout
+            this.navigationController.focusFlyout(this.workspace);
+        }
+    }
+
 
     /**
      * Handle global keypresses.
@@ -79,6 +138,29 @@ export class GlobalShortcuts {
                 e.stopPropagation();
                 this.focusSettingsButton();
                 break;
+
+            case 'h':
+                e.preventDefault();
+                e.stopPropagation();
+                this.focusHelpButton();
+                break;
+        }
+    }
+
+    /**
+ * Find and focus the help button.
+ */
+    private focusHelpButton() {
+        // Find button by ID
+        const helpButton = document.getElementById('help-button');
+
+        if (helpButton instanceof HTMLElement) {
+            helpButton.focus();
+
+            // Optionally scroll into view if the button is not visible
+            helpButton.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        } else {
+            console.warn('Could not find Help button with id="help-button"');
         }
     }
 

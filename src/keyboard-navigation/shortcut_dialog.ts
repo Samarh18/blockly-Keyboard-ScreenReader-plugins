@@ -6,8 +6,8 @@
 
 import * as Blockly from 'blockly/core';
 import * as Constants from './constants';
-import {ShortcutRegistry} from 'blockly/core';
-import {keyCodeArrayToString, toTitleCase} from './keynames';
+import { ShortcutRegistry } from 'blockly/core';
+import { keyCodeArrayToString, toTitleCase } from './keynames';
 
 /**
  * Class for handling the shortcuts dialog.
@@ -33,7 +33,7 @@ export class ShortcutDialog {
   }
 
   getPlatform() {
-    const {platform, userAgent} = navigator;
+    const { platform, userAgent } = navigator;
     if (platform.startsWith('Win')) {
       return 'Windows';
     } else if (platform.startsWith('Mac')) {
@@ -164,15 +164,16 @@ export class ShortcutDialog {
    */
   install() {
     /** List all of the currently registered shortcuts. */
-    const announceShortcut: ShortcutRegistry.KeyboardShortcut = {
-      name: Constants.SHORTCUT_NAMES.LIST_SHORTCUTS,
-      callback: () => {
-        this.toggle();
-        return true;
-      },
-      keyCodes: [Blockly.utils.KeyCodes.SLASH],
-    };
-    ShortcutRegistry.registry.register(announceShortcut);
+    // const announceShortcut: ShortcutRegistry.KeyboardShortcut = {
+    //   name: Constants.SHORTCUT_NAMES.LIST_SHORTCUTS,
+    //   callback: () => {
+    //     this.toggle();
+    //     return true;
+    //   },
+    //   keyCodes: [Blockly.utils.KeyCodes.SLASH],
+    // };
+    // ShortcutRegistry.registry.register(announceShortcut);
+    this.createModalContent();
   }
 
   /**

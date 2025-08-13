@@ -11,13 +11,14 @@ interface BlockDescriptions {
     [key: string]: BlockDescriptionFunction;
 }
 
+// LOGIC BLOCKS
 const blockDescriptions: BlockDescriptions = {
     controls_if: (block) => {
         const ifInput = block.getInputTargetBlock('IF0');
         const doInput = block.getInputTargetBlock('DO0');
         const ifMessage = ifInput ? getBlockMessage(ifInput) : 'condition';
         const doMessage = doInput ? getBlockMessage(doInput) : 'statement';
-        return `If ${ifMessage} then ${doMessage}`;
+        return `If ${ifMessage} then inside ${doMessage}`;
     },
     logic_compare: (block) => {
         const op = block.getFieldValue('OP') as keyof typeof opMessages;
@@ -69,6 +70,8 @@ const blockDescriptions: BlockDescriptions = {
         const elseMessage = elseInput ? getBlockMessage(elseInput) : 'statement B';
         return `If ${ifMessage} then ${thenMessage}, else ${elseMessage}`;
     },
+
+    //LOOPS BLOCKS
     controls_repeat_ext: (block) => {
         const timesInput = block.getInputTargetBlock('TIMES');
         let timesMessage = 'NUM';
@@ -77,7 +80,7 @@ const blockDescriptions: BlockDescriptions = {
         }
         const doInput = block.getInputTargetBlock('DO');
         const doMessage = doInput ? getBlockMessage(doInput) : 'statements';
-        return `Repeat the following ${timesMessage} times: ${doMessage}`;
+        return `Repeat the following ${timesMessage} times: inside ${doMessage}`;
     },
     controls_whileUntil: (block) => {
         const mode = block.getFieldValue('MODE') as keyof typeof modeMessages;
@@ -86,8 +89,8 @@ const blockDescriptions: BlockDescriptions = {
         const boolMessage = boolInput ? getBlockMessage(boolInput) : 'condition';
         const doMessage = doInput ? getBlockMessage(doInput) : 'statements';
         const modeMessages = {
-            WHILE: `While ${boolMessage} is true, repeat ${doMessage}.`,
-            UNTIL: `Until ${boolMessage} is true, repeat ${doMessage}.`
+            WHILE: `While ${boolMessage} is true, repeat inside ${doMessage}.`,
+            UNTIL: `Until ${boolMessage} is true, repeat inside ${doMessage}.`
         } as const;
         return modeMessages[mode];
     },
@@ -118,7 +121,7 @@ const blockDescriptions: BlockDescriptions = {
 
         const doMessage = doInput ? getBlockMessage(doInput, variables) : 'statements';
 
-        return `Count with ${varName} from ${fromMessage} to ${toMessage} by ${byMessage}, then ${doMessage}`;
+        return `Count with ${varName} from ${fromMessage} to ${toMessage} by ${byMessage}, then inside ${doMessage}`;
     },
     controls_forEach: (block, variables?: Variable[]) => {
         const varId = block.getFieldValue('VAR');
@@ -131,8 +134,10 @@ const blockDescriptions: BlockDescriptions = {
         const listMessage = listInput ? getBlockMessage(listInput, variables) : 'list';
         const doMessage = doInput ? getBlockMessage(doInput, variables) : 'statements';
 
-        return `For each item ${varName} in ${listMessage}, do ${doMessage}`;
+        return `For each item ${varName} in ${listMessage}, do inside ${doMessage}`;
     },
+
+    //MATH BLOCKS
     math_number: (block) => {
         const numValue = block.getFieldValue('NUM');
         return `${numValue}`;
@@ -428,6 +433,8 @@ const blockDescriptions: BlockDescriptions = {
         return `Prompt for ${typeMessages[type]} with message ${textMessage}`;
     },
 
+    // LISTS BLOCKS
+
     lists_create_with: (block, variables) => {
         const add0Input = block.getInputTargetBlock('ADD0');
         const add1Input = block.getInputTargetBlock('ADD1');
@@ -561,6 +568,8 @@ const blockDescriptions: BlockDescriptions = {
         return `Reverse ${listMessage}`;
     },
 
+    //VARIABLES BLOCKS
+
     variables_get: (block, variables) => {
         if (!variables) {
             return 'variable';
@@ -590,7 +599,7 @@ const blockDescriptions: BlockDescriptions = {
         const nameField = block.getFieldValue('NAME');
         const stackInput = block.getInputTargetBlock('STACK');
         const stackMessage = stackInput ? getBlockMessage(stackInput, variables) : 'nothing';
-        return `Function ${nameField} does ${stackMessage}`;
+        return `Function ${nameField} does inside ${stackMessage}`;
     },
 
     procedures_defreturn: (block, variables) => {
@@ -599,7 +608,7 @@ const blockDescriptions: BlockDescriptions = {
         const returnInput = block.getInputTargetBlock('RETURN');
         const stackMessage = stackInput ? getBlockMessage(stackInput, variables) : 'nothing';
         const returnMessage = returnInput ? getBlockMessage(returnInput, variables) : 'nothing';
-        return `Function ${nameField} does ${stackMessage} and returns ${returnMessage}`;
+        return `Function ${nameField} does inside ${stackMessage} and returns ${returnMessage}`;
     },
 
     procedures_ifreturn: (block, variables) => {

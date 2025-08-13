@@ -165,13 +165,6 @@ const blankCanvas = {
           },
         },
       },
-      {
-        'type': 'p5_draw',
-        'id': '3iI4f%2#Gmk}=OjI7(8h',
-        'x': 0,
-        'y': 332,
-        'deletable': false,
-      },
     ],
   },
 };

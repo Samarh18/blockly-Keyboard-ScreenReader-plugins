@@ -12,8 +12,7 @@
 
 import './gesture_monkey_patch';
 import './toolbox_monkey_patch';
-import { SettingsDialog } from '../test/settings_dialog';
-
+import { SettingsDialog } from '../screen-reader/settings_dialog';
 
 import * as Blockly from 'blockly/core';
 import {
