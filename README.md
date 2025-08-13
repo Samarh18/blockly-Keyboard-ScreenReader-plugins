@@ -4,7 +4,21 @@ This experimental project aims to enhance the accessibility of Blockly by combin
 
 ## Demo
 
-A working demonstration of this accessibility implementation is available at: [https://samarh18.github.io/blockly-accessibility-demo/](https://samarh18.github.io/blockly-accessibility-demo/)
+A working demonstration of this accessibility implementation is available at: [https://Samarh18.github.io/Blockly-PlugIn-ScreenReader/](tps://Samarh18.github.io/Blockly-PlugIn-ScreenReader/)
+
+## Keyboard Shortcuts
+
+### Workspace Shortcuts (Work only when focusing on the workspace)
+- **O key**: Navigate to root block of current stack
+- **N key**: Navigate to next stack of blocks
+- **C key**: Clean up workspace (organize blocks automatically)
+- **D key**: Delete all blocks from workspace
+
+### Global Shortcuts (Work from anywhere on the page)
+- **B key**: Open and focus the toolbox/blocks menu
+- **W key**: Focus the workspace for block editing
+- **S key**: Focus the Settings button
+- **H key**: Focus the Help button
 
 ## Usage Guidelines
 
@@ -12,16 +26,6 @@ A working demonstration of this accessibility implementation is available at: [h
 
 #### Initial Navigation
 - Use **Tab Key** to navigate between main interface areas (workspace, toolbox, controls)
-
-#### Global Shortcuts (Work from anywhere on the page)
-- **B**: Open and focus the toolbox/blocks menu
-- **R**: Focus the "Run Code!" button  
-- **W**: Focus the workspace for block editing
-
-#### Workspace Shortcuts (Work only when focusing on the workspace)
-- **C**: Clean up workspace (organize blocks automatically)
-- **D**: Delete all blocks from workspace
-- **Auto-cleanup**: Workspace automatically organizes when blocks are added or removed 
 
 #### Basic Movement
 - **Arrow Keys**: Navigate between blocks, connections, and fields
@@ -31,7 +35,6 @@ A working demonstration of this accessibility implementation is available at: [h
 #### Screen Reader Settings
 
 The accessibility demo includes a customizable settings window to personalize your screen reader experience. Access it by pressing **S** which will focus on the "Settings" button, and then pressing "Enter" will open the window, or clicking the button directly.
-
 
 ##### Available Settings
 
@@ -77,11 +80,15 @@ The accessibility demo includes a customizable settings window to personalize yo
 3. **Select Block**: Navigate through the menu and select the desired block by clicking **Enter**
 4. **Automatic Connection**: The selected block is automatically added and connected to your indicated position
 
+### Block Stack Navigation
+- **O key**: Navigate to the root (top) block of the current stack
+- **N key**: Navigate to the next stack of blocks (cycles through all stacks)
 
 ### Screen Reader Features
 
 #### Automatic Announcements
 - **Block Navigation**: Announces block type, position, and connections
+- **Stack Navigation**: Announces current stack position (e.g., "Stack 2 of 5")
 - **Menu Navigation**: Describes menu items and navigation options
 - **Context Awareness**: Provides relevant information based on current location in the workspace
 
@@ -100,27 +107,6 @@ The screen reader provides detailed descriptions for:
 - **Escape**: Close menu without selection
 - **Automatic Announcement**: Menu contents are announced when opened
 - **Mathematical Function Menus**: Special support for math functions with clear pronunciation
-
-### Accessibility Best Practices
-
-#### For Screen Reader Users
-1. Use **Tab** to get familiar with the interface layout
-2. Use **B** to quickly access blocks when needed
-3. Navigate with **arrow keys** within each area
-4. Listen for position announcements ("1 of 5") in menus
-5. Use **first letter navigation** in toolbox for quick access
-
-#### For Keyboard Users
-1. Learn the **global shortcuts** (B, R, W) for quick navigation
-3. Use **Enter** to interact with focused elements
-4. Use **Escape** to back out of any context
-
-#### For All Users
-- The workspace automatically stays organized
-- All mouse interactions have keyboard equivalents
-- Visual focus indicators show current selection
-
-
 
 ## Current Status
 

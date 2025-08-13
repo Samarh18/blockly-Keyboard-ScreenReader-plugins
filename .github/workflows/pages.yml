@@ -28,18 +28,34 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: latest
+          node-version: '18'
           cache: 'npm'
-      - run: npm ci
-      - run: npm run ghpages
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build project
+        run: npm run build
+      
+      - name: Copy test files for demo
+        run: |
+          mkdir -p ./dist
+          cp -r ./test/* ./dist/
+          # Make sure index.html is in the root
+          if [ -f "./test/index.html" ]; then
+            cp ./test/index.html ./dist/index.html
+          fi
+      
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # Upload build folder
+          # Upload dist folder
           path: './dist'
+          
   deploy:
     environment:
       name: github-pages
