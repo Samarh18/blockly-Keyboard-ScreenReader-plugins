@@ -873,6 +873,9 @@ export class ScreenReader {
           const block = this.workspace.getBlockById(selectedEvent.newElementId);
           if (block) {
             this.announceBlock(block);
+            // Prevent the cursor polling interval from announcing the same block
+            // a second time when it detects the cursor moved to this block.
+            this.lastWorkspaceNodeId = `block-${block.id}`;
           }
         } else {
           this.speak("No block selected");
