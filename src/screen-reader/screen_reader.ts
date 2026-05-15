@@ -92,11 +92,12 @@ export class ScreenReader {
     this.workspace = workspace;
     this.debugLog('Initializing ScreenReader...');
 
+    // Load settings first — initializeSpeechSynthesis() calls applyVoiceSettings()
+    // which reads this.settings, so settings must be ready before that call.
+    this.settings = this.loadSettings();
+
     // Initialize speech synthesis
     this.initializeSpeechSynthesis();
-
-    // Load and apply settings
-    this.settings = this.loadSettings();
     this.applyVoiceSettings();
 
     // Initialize all event listeners
@@ -321,6 +322,10 @@ export class ScreenReader {
         this.currentUtterance = null;
       };
 
+      // Chrome pauses speechSynthesis after ~15s of silence and never
+      // auto-resumes. Calling resume() before speak() is a no-op when
+      // synthesis is already running, and fixes the silent-queue bug.
+      window.speechSynthesis.resume();
       window.speechSynthesis.speak(utterance);
     } catch (error) {
       this.debugLog(`Error creating speech utterance: ${error}`);
