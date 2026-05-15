@@ -74,6 +74,7 @@ export class ScreenReader {
   // SPECIAL STATE FLAGS
   // -------------------------------------------------------------------------
   private isDeletingAll: boolean = false;
+  private hasAnnouncedToolboxIntro: boolean = false;
 
   // ============================================================================
   // CONSTRUCTOR AND INITIALIZATION
@@ -1151,23 +1152,7 @@ export class ScreenReader {
         const selectedItem = toolbox.getSelectedItem();
         if (selectedItem && 'getName' in selectedItem && typeof selectedItem.getName === 'function') {
           const categoryName = selectedItem.getName();
-          const firstLetter = categoryName.charAt(0).toUpperCase();
-          const allItems = toolbox.getToolboxItems();
-          const matchingItems = allItems.filter((item: Blockly.IToolboxItem) => {
-            if ('getName' in item && typeof item.getName === 'function') {
-              return item.getName().toUpperCase().startsWith(firstLetter) && item.isSelectable();
-            }
-            return false;
-          });
-
-          if (matchingItems.length > 1) {
-            const currentIndex = matchingItems.findIndex((item: Blockly.IToolboxItem) => item === selectedItem) + 1;
-            this.speakHighPriority(
-              `${categoryName} category, ${currentIndex} of ${matchingItems.length} starting with ${firstLetter}`
-            );
-          } else {
-            this.speakHighPriority(`${categoryName} category selected`);
-          }
+          this.speakHighPriority(`${categoryName} category selected`);
         }
       }
     });
@@ -1240,7 +1225,12 @@ export class ScreenReader {
         target.getAttribute('role') === 'tree') {
         const selectedItem = target.querySelector('[aria-selected="true"]');
         const categoryName = selectedItem?.textContent?.trim() || 'first category';
-        this.speak(`Blocks menu categories. ${categoryName} selected. Use arrow keys to navigate.`);
+        if (!this.hasAnnouncedToolboxIntro) {
+          this.hasAnnouncedToolboxIntro = true;
+          this.speak(`Blocks menu categories. ${categoryName} selected. Use arrow keys to navigate.`);
+        } else {
+          this.speak(`${categoryName} selected`);
+        }
 
         if (!target.hasAttribute('data-arrow-handler')) {
           target.setAttribute('data-arrow-handler', 'true');
