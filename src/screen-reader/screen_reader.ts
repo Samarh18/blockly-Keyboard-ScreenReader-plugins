@@ -74,7 +74,15 @@ export class ScreenReader {
   // SPECIAL STATE FLAGS
   // -------------------------------------------------------------------------
   private isDeletingAll: boolean = false;
-  private hasAnnouncedToolboxIntro: boolean = false;
+  // Tracks areas/buttons that have already received their first-visit announcement
+  // so we can give a shorter message on subsequent entries.
+  private firstVisitAreas: Set<string> = new Set();
+
+  private isFirstVisit(area: string): boolean {
+    if (this.firstVisitAreas.has(area)) return false;
+    this.firstVisitAreas.add(area);
+    return true;
+  }
 
   // ============================================================================
   // CONSTRUCTOR AND INITIALIZATION
@@ -724,7 +732,11 @@ export class ScreenReader {
         this.speakHighPriority("Unknown block");
       }
     } else if (type === Blockly.ASTNode.types.WORKSPACE) {
-      this.speakHighPriority("Workspace. Use arrow keys to navigate blocks.");
+      if (this.isFirstVisit('workspace')) {
+        this.speakHighPriority("Workspace. Use arrow keys to move between blocks, Enter to select, Escape to leave.");
+      } else {
+        this.speakHighPriority("Workspace.");
+      }
     } else if (node.isConnection()) {
       const connection = location as Blockly.Connection;
       const block = connection.getSourceBlock();
@@ -1201,7 +1213,11 @@ export class ScreenReader {
     if (flyoutElement) {
       flyoutElement.addEventListener('focus', () => {
         this.debugLog('Flyout focused');
-        this.speak("Blocks menu focused.");
+        if (this.isFirstVisit('flyout')) {
+          this.speak("Blocks menu open. Use arrow keys to browse blocks, Enter to add to workspace, Escape to go back.");
+        } else {
+          this.speak("Blocks menu.");
+        }
         this.hasLeftWorkspace = true;
       });
 
@@ -1225,9 +1241,8 @@ export class ScreenReader {
         target.getAttribute('role') === 'tree') {
         const selectedItem = target.querySelector('[aria-selected="true"]');
         const categoryName = selectedItem?.textContent?.trim() || 'first category';
-        if (!this.hasAnnouncedToolboxIntro) {
-          this.hasAnnouncedToolboxIntro = true;
-          this.speak(`Blocks menu categories. ${categoryName} selected. Use arrow keys to navigate.`);
+        if (this.isFirstVisit('toolbox')) {
+          this.speak(`Blocks menu. ${categoryName} selected. Use arrow keys to switch categories, Enter to open.`);
         } else {
           this.speak(`${categoryName} selected`);
         }
@@ -1268,10 +1283,21 @@ export class ScreenReader {
    */
   private handleFormControlFocus(target: HTMLElement): void {
     switch (target.tagName) {
-      case 'BUTTON':
+      case 'BUTTON': {
         const buttonText = target.textContent?.trim() || target.getAttribute('aria-label') || 'Unknown button';
-        this.speak(`${buttonText} button`);
+        const buttonId = target.id || buttonText;
+        if (this.isFirstVisit(`button-${buttonId}`)) {
+          const hint =
+            buttonId === 'run'             ? 'Press Enter to run your program.' :
+            buttonId === 'settings-button' ? 'Press Enter to open screen reader settings.' :
+            buttonId === 'help-button'     ? 'Press Enter to open the help guide.' :
+            'Press Enter to activate.';
+          this.speak(`${buttonText} button. ${hint}`);
+        } else {
+          this.speak(`${buttonText} button`);
+        }
         break;
+      }
 
       case 'SELECT':
         const select = target as HTMLSelectElement;
