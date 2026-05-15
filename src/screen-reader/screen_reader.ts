@@ -5,7 +5,7 @@
  */
 
 import * as Blockly from 'blockly';
-import { getToolboxElement, getFlyoutElement } from '../keyboard-navigation/workspace_utilities';
+import { getFlyoutElement } from '../keyboard-navigation/workspace_utilities';
 import { getBlockMessage } from './block_descriptions';
 import { SpeechSettings } from './settings_dialog';
 
@@ -53,7 +53,6 @@ export class ScreenReader {
   // -------------------------------------------------------------------------
   private pendingMessage: string | null = null;
   private interruptionTimer: number | null = null;
-  private isSpeaking: boolean = false;
 
   // -------------------------------------------------------------------------
   // NAVIGATION AND STATE TRACKING PROPERTIES
@@ -269,12 +268,10 @@ export class ScreenReader {
 
       utterance.onstart = () => {
         this.debugLog(`Speech started: "${message}"`);
-        this.isSpeaking = true;
       };
 
       utterance.onend = () => {
         this.debugLog(`Speech ended: "${message}"`);
-        this.isSpeaking = false;
 
         if (this.pendingMessage) {
           const pending = this.pendingMessage;
@@ -285,7 +282,6 @@ export class ScreenReader {
 
       utterance.onerror = (event) => {
         this.debugLog(`Speech error: ${event.error} for message: "${message}"`);
-        this.isSpeaking = false;
       };
 
       // Chrome pauses speechSynthesis after ~15s of silence and never
@@ -1142,7 +1138,6 @@ export class ScreenReader {
   private setupToolboxSelectionListener(): void {
     this.workspace.addChangeListener((event: Blockly.Events.Abstract) => {
       if (event.type === Blockly.Events.TOOLBOX_ITEM_SELECT) {
-        const selectEvent = event as Blockly.Events.ToolboxItemSelect;
         const toolbox = this.workspace.getToolbox();
 
         if (!toolbox || !(toolbox instanceof Blockly.Toolbox)) return;
@@ -1414,7 +1409,7 @@ export class ScreenReader {
       lastValue = input.value;
     };
 
-    const inputListener = (e: Event) => {
+    const inputListener = (_e: Event) => {
       const currentValue = input.value;
       this.announceFieldChange(lastValue, currentValue, isBackspaceOrDelete);
       lastValue = currentValue;
@@ -1442,7 +1437,7 @@ export class ScreenReader {
   /**
    * Generate a unique ID for an input field
    */
-  private generateInputId(input: HTMLInputElement): string {
+  private generateInputId(_input: HTMLInputElement): string {
     return `field_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
 
@@ -1527,7 +1522,7 @@ export class ScreenReader {
    * Clean up all field editing listeners
    */
   private disposeFieldEditingListeners(): void {
-    this.fieldEditingListeners.forEach((listener, inputId) => {
+    this.fieldEditingListeners.forEach((_listener, inputId) => {
       this.removeFieldEditingListener(inputId);
     });
     this.fieldEditingListeners.clear();
