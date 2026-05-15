@@ -45,9 +45,27 @@ export class HelpDialog {
 
     setTimeout(() => {
       if (!this.outputDiv || !this.modalContainer || !this.helpDialog) return;
-      this.toggle();
+
+      // Open visually
+      this.helpDialog.showModal();
+      const container = this.helpDialog.querySelector('.help-container') as HTMLElement;
+      if (container) container.focus();
+
       localStorage.setItem('help-dialog-opened', 'true');
       this.hasOpenedBefore = true;
+
+      // Web Speech API requires a user gesture before it can speak.
+      // Wait for the student's first keypress or tap, then announce once.
+      let announced = false;
+      const announce = () => {
+        if (announced) return;
+        announced = true;
+        this.screenReader.forceSpeek(
+          'The help guide is open. Press Tab to explore tips, or Escape to close and start.'
+        );
+      };
+      document.addEventListener('keydown', announce, { once: true });
+      document.addEventListener('pointerdown', announce, { once: true });
     }, 1000);
   }
 
@@ -69,7 +87,7 @@ export class HelpDialog {
 
         setTimeout(() => {
           this.screenReader.forceSpeek(
-            'Help guide opened. Use Tab to navigate. Press Escape to close.'
+            'Help guide open. Tab to navigate, Escape to close.'
           );
         }, 100);
       }
