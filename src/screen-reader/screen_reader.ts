@@ -243,7 +243,10 @@ export class ScreenReader {
     } else {
       // Normal priority: queue behind current speech, replacing any older
       // pending message so only the most recent normal announcement plays.
-      if (window.speechSynthesis.speaking) {
+      // Also guard against the 50ms window after a high-priority cancel()
+      // where speaking=false but the timer hasn't fired yet — firing
+      // speakImmediate() there causes wrong-order queuing.
+      if (window.speechSynthesis.speaking || this.interruptionTimer !== null) {
         this.pendingMessage = message;
       } else {
         this.speakImmediate(message);
@@ -312,7 +315,10 @@ export class ScreenReader {
       this.pendingMessage = null;
       window.speechSynthesis.cancel();
 
-      setTimeout(() => this.speakImmediate(message), 100);
+      this.interruptionTimer = window.setTimeout(() => {
+        this.interruptionTimer = null;
+        this.speakImmediate(message);
+      }, 100);
     }
   }
 
