@@ -38,51 +38,17 @@ export class HelpDialog {
   }
 
   /**
-     * Open help dialog automatically on page load (forced every time)
-     */
+   * Open help dialog automatically on first visit only
+   */
   autoOpenOnFirstVisit() {
-    // Force open every time 
-    console.log('HelpDialog: Force opening dialog on page load');
+    if (this.hasOpenedBefore) return;
 
-    // Delay to ensure page is fully loaded
     setTimeout(() => {
-      console.log('HelpDialog: Attempting to open help dialog');
-
-      if (!this.outputDiv) {
-        console.error('HelpDialog: outputDiv is null, cannot open dialog');
-        return;
-      }
-
-      if (!this.modalContainer || !this.helpDialog) {
-        console.error('HelpDialog: Modal elements not created, calling createModalContent');
-        this.createModalContent();
-      }
-
+      if (!this.outputDiv || !this.modalContainer || !this.helpDialog) return;
       this.toggle();
-
-      // Mark as opened
       localStorage.setItem('help-dialog-opened', 'true');
       this.hasOpenedBefore = true;
-      console.log('HelpDialog: Marked as opened in localStorage');
-
-      // IMPORTANT: Enable speech synthesis after user interaction
-      this.enableSpeechAfterUserInteraction();
-    }, 1500); // Increased delay to 1.5 seconds
-  }
-
-  /**
-   * Enable speech synthesis after user interaction
-   */
-  private enableSpeechAfterUserInteraction() {
-    // Create a silent utterance to "prime" the speech synthesis
-    const silentUtterance = new SpeechSynthesisUtterance('');
-    silentUtterance.volume = 0;
-    speechSynthesis.speak(silentUtterance);
-
-    // Now test with actual speech
-    setTimeout(() => {
-      // this.screenReader.testSpeechSettings('Speech synthesis is now enabled. Help dialog opened automatically on first visit.');
-    }, 10);
+    }, 1000);
   }
 
   /**

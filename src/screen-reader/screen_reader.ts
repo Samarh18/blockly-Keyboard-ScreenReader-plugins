@@ -51,10 +51,6 @@ export class ScreenReader {
   // -------------------------------------------------------------------------
   // SPEECH SYNTHESIS PROPERTIES
   // -------------------------------------------------------------------------
-  private currentUtterance: SpeechSynthesisUtterance | null = null;
-  private utteranceStartTime: number = 0;
-  private minSpeakTime: number = 500; // Minimum time in ms to speak before allowing interruption
-  private interruptionDelay: number = 300; // Grace period before interrupting
   private pendingMessage: string | null = null;
   private interruptionTimer: number | null = null;
   private isSpeaking: boolean = false;
@@ -174,7 +170,6 @@ export class ScreenReader {
       if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
       }
-      this.currentUtterance = null;
       this.pendingMessage = null;
     }
   }
@@ -231,54 +226,30 @@ export class ScreenReader {
       return;
     }
 
-    // Clear interruption timer if exists
+    // Always clear any pending deferred speak so only the latest wins.
     if (this.interruptionTimer) {
       clearTimeout(this.interruptionTimer);
       this.interruptionTimer = null;
     }
 
-    // Clear pending messages for high priority announcements
     if (priority === 'high') {
+      // Cancel whatever is playing and schedule the new message after a
+      // short pause so Chrome has time to process the cancel.
       this.pendingMessage = null;
-    }
-
-    // Handle current speech interruption
-    if (this.currentUtterance && window.speechSynthesis.speaking) {
-      const timeSpoken = Date.now() - this.utteranceStartTime;
-
-      if (priority === 'high' && timeSpoken > 200) {
-        this.interruptCurrentAndSpeak(message);
-        return;
-      }
-
-      if (timeSpoken < this.minSpeakTime) {
+      window.speechSynthesis.cancel();
+      this.interruptionTimer = window.setTimeout(() => {
+        this.interruptionTimer = null;
+        this.speakImmediate(message);
+      }, 50);
+    } else {
+      // Normal priority: queue behind current speech, replacing any older
+      // pending message so only the most recent normal announcement plays.
+      if (window.speechSynthesis.speaking) {
         this.pendingMessage = message;
-        this.interruptionTimer = window.setTimeout(() => {
-          this.interruptCurrentAndSpeak(message);
-        }, this.minSpeakTime - timeSpoken + this.interruptionDelay);
-        return;
       } else {
-        this.interruptCurrentAndSpeak(message);
-        return;
+        this.speakImmediate(message);
       }
     }
-
-    // No current speech, speak immediately
-    this.speakImmediate(message);
-  }
-
-  /**
-   * Interrupt current speech and speak new message
-   */
-  private interruptCurrentAndSpeak(message: string): void {
-    this.debugLog('Interrupting current speech');
-    this.pendingMessage = null;
-    window.speechSynthesis.cancel();
-    this.currentUtterance = null;
-
-    setTimeout(() => {
-      this.speakImmediate(message);
-    }, 50);
   }
 
   /**
@@ -296,9 +267,6 @@ export class ScreenReader {
         utterance.voice = this.selectedVoice;
       }
 
-      this.currentUtterance = utterance;
-      this.utteranceStartTime = Date.now();
-
       utterance.onstart = () => {
         this.debugLog(`Speech started: "${message}"`);
         this.isSpeaking = true;
@@ -307,7 +275,6 @@ export class ScreenReader {
       utterance.onend = () => {
         this.debugLog(`Speech ended: "${message}"`);
         this.isSpeaking = false;
-        this.currentUtterance = null;
 
         if (this.pendingMessage) {
           const pending = this.pendingMessage;
@@ -319,7 +286,6 @@ export class ScreenReader {
       utterance.onerror = (event) => {
         this.debugLog(`Speech error: ${event.error} for message: "${message}"`);
         this.isSpeaking = false;
-        this.currentUtterance = null;
       };
 
       // Chrome pauses speechSynthesis after ~15s of silence and never
@@ -349,7 +315,6 @@ export class ScreenReader {
 
       this.pendingMessage = null;
       window.speechSynthesis.cancel();
-      this.currentUtterance = null;
 
       setTimeout(() => this.speakImmediate(message), 100);
     }
