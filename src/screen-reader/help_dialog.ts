@@ -90,14 +90,14 @@ export class HelpDialog {
   createModalContent() {
     const modalContents = `
     <div class="modal-container" id="help">
-      <dialog class="help-modal">
+      <dialog class="help-modal" aria-labelledby="help-title">
         <div class="help-container" tabindex="0">
-          <div class="header">
-            <button class="close-modal" aria-label="Close help">
-              <span class="material-symbols-outlined">close</span>
+          <div class="dialog-header">
+            <button class="close-modal" aria-label="Close help guide">
+              <span class="material-symbols-outlined" aria-hidden="true">close</span>
             </button>
-            <h1>Blockly Accessibility Guide</h1>
-            <p class="help-subtitle">Learn how to navigate and use Blockly with keyboard and screen reader</p>
+            <h1 id="help-title">Blockly Accessibility Guide</h1>
+            <p class="dialog-subtitle">Navigate Blockly with keyboard and screen reader</p>
           </div>
           
           <div class="help-content">
@@ -160,10 +160,11 @@ export class HelpDialog {
               <p tabindex="0"><strong>Step 4:</strong> Automatic Connection - Selected block connects automatically to your indicated position</p>
             </div>
 
-            <div class="action-buttons">
-              <button id="test-speech" class="test-button">Test Speech</button>
-              <button id="close-help" class="close-button">Close Help Guide</button>
-            </div>
+          </div>
+
+          <div class="dialog-footer">
+            <button id="test-speech" class="dialog-btn dialog-btn-secondary">Test Speech</button>
+            <button id="close-help" class="dialog-btn dialog-btn-primary">Close Guide</button>
           </div>
         </div>
       </dialog>
@@ -263,68 +264,59 @@ export class HelpDialog {
 }
 
 /**
- * Register CSS for the help dialog - following the same pattern as settings
+ * Register CSS for the help dialog
  */
 Blockly.Css.register(`
+
+/* Backdrop */
+.help-modal::backdrop {
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(3px);
+}
+
+/* Dialog shell — matches settings-modal */
 .help-modal {
-  border: 1px solid var(--shortcut-modal-border-color, #9aa0a6);
-  border-radius: 12px;
-  box-shadow: 6px 6px 32px rgba(0,0,0,.5);
-  flex-direction: column;
-  gap: 12px;
+  border: none;
+  border-top: 4px solid #4F46E5;
+  border-radius: 16px;
+  box-shadow: 0 8px 40px rgba(79, 70, 229, 0.15), 0 2px 8px rgba(0,0,0,0.08);
+  padding: 0;
+  background: #ffffff;
+  max-height: 85vh;
+  max-width: 560px;
+  width: calc(100% - 48px);
   margin: auto;
-  max-height: 82vh;
-  max-width: calc(100% - 10em);
-  padding: 24px;
-  position: relative;
-  z-index: 99;
-  background: white;
+  display: none;
+  flex-direction: column;
 }
 
 .help-modal[open] {
   display: flex;
 }
 
-.help-modal .close-modal {
-  border: 0;
-  background: transparent;
-  float: inline-end;
-  margin: 0;
-  position: absolute;
-  top: 16px;
-  right: 24px;
-  cursor: pointer;
-}
-
-.help-modal h1 {
-  font-weight: 600;
-  font-size: 1.3em;
-  margin: 0;
-  color: #000000;
-}
-
-.header-spacing {
-  height: 24px;
-}
-
+/* Inner wrapper */
 .help-container {
-  font-size: 0.95em;
-  padding: 0.5em;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
   outline: none;
+  font-size: 0.95em;
 }
 
+/* ── Scrollable content ── */
 .help-content {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  max-height: 60vh;
+  padding: 8px 24px 16px;
   overflow-y: auto;
-  padding-right: 8px;
+  flex: 1;
 }
 
+/* ── Sections ── */
 .help-section {
-  padding-bottom: 16px;
-  border-bottom: 1px solid #eee;
+  padding: 16px 0;
+  border-bottom: 1px solid #F3F4F6;
 }
 
 .help-section:last-of-type {
@@ -332,170 +324,64 @@ Blockly.Css.register(`
 }
 
 .help-section h2 {
-  color: #000000;
-  font-size: 1.1em;
-  margin: 0 0 12px 0;
-  padding-bottom: 4px;
-  border-bottom: 2px solid #e3f2fd;
+  font-size: 1em;
+  font-weight: 700;
+  color: #4F46E5;
+  margin: 0 0 10px 0;
 }
 
 .help-section h3 {
-  color: #333;
-  font-size: 1em;
-  margin: 16px 0 8px 0;
+  font-size: 0.95em;
   font-weight: 600;
+  color: #1F2937;
+  margin: 12px 0 6px 0;
 }
 
 .help-section p {
-  margin: 0 0 12px 0;
+  font-size: 0.9em;
+  color: #374151;
+  margin: 0 0 6px 0;
   line-height: 1.5;
+  padding: 3px 4px;
+  border-radius: 4px;
 }
 
-.help-list {
-  list-style: none;
-  padding-left: 0;
-  margin: 0 0 12px 0;
+.help-section p:last-child {
+  margin-bottom: 0;
 }
 
-.help-list li {
-  margin-bottom: 8px;
-  padding-left: 16px;
-  position: relative;
-}
-
-.help-list li::before {
-  content: "→";
-  color: #000000;
-  font-weight: bold;
-  position: absolute;
-  left: 0;
-}
-
-.help-numbered-list {
-  padding-left: 0;
-  margin: 0 0 12px 0;
-  counter-reset: help-counter;
-}
-
-.help-numbered-list li {
-  margin-bottom: 8px;
-  padding-left: 24px;
-  position: relative;
-  counter-increment: help-counter;
-}
-
-.help-numbered-list li::before {
-  content: counter(help-counter) ".";
-  color: #000000;
-  font-weight: bold;
-  position: absolute;
-  left: 0;
-}
-
-.action-buttons {
-  display: flex;
-  justify-content: center;
-  gap: 16px;
-  margin-top: 24px;
-  padding-top: 20px;
-  border-top: 2px solid #cccccc;
-}
-
-.test-button {
-  background: #ffffff;
-  border: 2px solid #000000;
-  color: #000000;
-  padding: 12px 20px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 1.1em;
-  font-weight: 600;
-  min-width: 160px;
-}
-
-.test-button:hover,
-.test-button:focus {
-  background: #000000;
-  color: #ffffff;
-  outline: 4px solid #ff6600;
-}
-
-.close-button {
-  background: #000000;
-  color: #ffffff;
-  border: 2px solid #000000;
-  padding: 12px 20px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 1.1em;
-  font-weight: 600;
-  min-width: 160px;
-}
-
-.close-button:hover,
-.close-button:focus {
-  background: #ffffff;
-  color: #000000;
-  outline: 4px solid #ff6600;
-}
-
-.close-button:hover,
-.close-button:focus {
-  background: #000000;
-  outline: 3px solid #ffa200;
-}
-
-/* Responsive design */
-@media (max-width: 768px) {
-  .help-modal {
-    width: 95%;
-    max-height: 95vh;
-    padding: 16px;
-  }
-  
-  .help-content {
-    max-height: 70vh;
-  }
-}
-
-/* High contrast mode support */
-@media (prefers-contrast: high) {
-  .help-modal {
-    border: 2px solid #000;
-  }
-  
-  .help-modal .close-modal:focus,
-  .close-button:focus {
-    outline: 3px solid #000;
-  }
-}
-
-/* Focus styles for all focusable elements */
-.help-section:focus,
+/* Focus styles for keyboard-navigable content */
 .help-section h2:focus,
 .help-section h3:focus,
-.help-content-block:focus,
 .help-section p:focus {
-  outline: 2px solid #ffa200;
+  outline: 3px solid #ffa200;
   outline-offset: 2px;
   border-radius: 4px;
-  background-color: rgba(255, 162, 0, 0.1);
+  background-color: #FFFBEB;
 }
 
-.help-content-block {
-  padding: 8px;
-  margin: 8px 0;
-  border-radius: 4px;
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  .help-modal {
+    width: calc(100% - 24px);
+    max-height: 92vh;
+  }
+
+  .dialog-footer {
+    justify-content: stretch;
+  }
+
+  .dialog-btn {
+    flex: 1;
+    min-width: 0;
+  }
 }
 
-.help-content-block:focus {
-  background-color: rgba(255, 162, 0, 0.15);
-}
-
-.help-section p {
-  margin: 8px 0;
-  padding: 4px;
-  border-radius: 4px;
-  line-height: 1.4;
+/* ── High-contrast mode ── */
+@media (prefers-contrast: high) {
+  .help-modal {
+    border: 3px solid #000;
+    border-top: 6px solid #4F46E5;
+  }
 }
 `);

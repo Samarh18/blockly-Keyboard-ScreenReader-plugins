@@ -260,59 +260,60 @@ export class SettingsDialog {
 
     const modalContents = `
     <div class="modal-container">
-      <dialog class="settings-modal">
+      <dialog class="settings-modal" aria-labelledby="settings-title">
         <div class="settings-container" tabindex="0">
-          <div class="header">
+          <div class="dialog-header">
             <button class="close-modal" aria-label="Close settings">
-              <span class="material-symbols-outlined">close</span>
+              <span class="material-symbols-outlined" aria-hidden="true">close</span>
             </button>
-            <h1>Screen Reader Settings</h1>
+            <h1 id="settings-title">Screen Reader Settings</h1>
+            <p class="dialog-subtitle">Customize your screen reader experience</p>
           </div>
 
-          <div class="setting-group">
-              <label class="checkbox-label">
+          <div class="settings-content">
+            <div class="setting-group">
+              <label class="checkbox-label" for="screen-reader-enabled">
                 <input type="checkbox" id="screen-reader-enabled" ${this.currentSettings.enabled ? 'checked' : ''}>
                 <span class="checkbox-text">Enable Screen Reader</span>
               </label>
-              <div class="setting-description">Turn screen reader announcements on or off</div>
-            </div>
-          
-          <div class="settings-content">
-            <div class="setting-group">
-              <label for="speech-rate">Speech Rate: <span id="rate-value">${this.currentSettings.rate}</span></label>
-              <input type="range" id="speech-rate" min="0.5" max="3.0" step="0.1" value="${this.currentSettings.rate}" 
-                     aria-describedby="rate-description">
-              <div id="rate-description" class="setting-description">Controls how fast speech is spoken</div>
+              <p class="setting-description" id="enabled-description">Turn speech announcements on or off</p>
             </div>
 
             <div class="setting-group">
-              <label for="speech-pitch">Speech Pitch: <span id="pitch-value">${this.currentSettings.pitch}</span></label>
+              <label for="speech-rate">Speech Rate <span class="setting-value" id="rate-value">${this.currentSettings.rate}</span></label>
+              <input type="range" id="speech-rate" min="0.5" max="3.0" step="0.1" value="${this.currentSettings.rate}"
+                     aria-describedby="rate-description">
+              <p id="rate-description" class="setting-description">How fast speech is spoken (0.5 = slow, 3.0 = fast)</p>
+            </div>
+
+            <div class="setting-group">
+              <label for="speech-pitch">Speech Pitch <span class="setting-value" id="pitch-value">${this.currentSettings.pitch}</span></label>
               <input type="range" id="speech-pitch" min="0.5" max="2.0" step="0.1" value="${this.currentSettings.pitch}"
                      aria-describedby="pitch-description">
-              <div id="pitch-description" class="setting-description">Controls the pitch/tone of speech</div>
+              <p id="pitch-description" class="setting-description">Tone of voice (0.5 = low, 2.0 = high)</p>
             </div>
 
             <div class="setting-group">
-              <label for="speech-volume">Speech Volume: <span id="volume-value">${this.currentSettings.volume}</span></label>
+              <label for="speech-volume">Speech Volume <span class="setting-value" id="volume-value">${this.currentSettings.volume}</span></label>
               <input type="range" id="speech-volume" min="0.1" max="1.0" step="0.1" value="${this.currentSettings.volume}"
-                       aria-describedby="volume-description">
-              <div id="volume-description" class="setting-description">Controls how loud speech is</div>
+                     aria-describedby="volume-description">
+              <p id="volume-description" class="setting-description">How loud the voice is (0.1 = quiet, 1.0 = full)</p>
             </div>
 
             <div class="setting-group">
-              <label for="speech-voice">Voice Selection:</label>
+              <label for="speech-voice">Voice</label>
               <select id="speech-voice" aria-describedby="voice-description">
                 ${voiceOptions}
               </select>
-              <div id="voice-description" class="setting-description">Choose which voice to use for speech</div>
+              <p id="voice-description" class="setting-description">Choose a voice for speech output</p>
             </div>
+          </div>
 
-            <div class="action-buttons">
-              <button id="test-settings" class="test-button">Test Current Settings</button>
-              <button id="reset-defaults" class="reset-button">Reset to Defaults</button>
-              <button id="save-settings" class="save-button">Save Changes</button>
-              <button id="cancel-settings" class="cancel-button">Cancel</button>
-            </div>
+          <div class="dialog-footer">
+            <button id="test-settings" class="dialog-btn dialog-btn-secondary">Test Voice</button>
+            <button id="reset-defaults" class="dialog-btn dialog-btn-ghost">Reset</button>
+            <button id="cancel-settings" class="dialog-btn dialog-btn-ghost">Cancel</button>
+            <button id="save-settings" class="dialog-btn dialog-btn-primary">Save</button>
           </div>
         </div>
       </dialog>
@@ -618,247 +619,198 @@ export class SettingsDialog {
  * Register CSS for the settings dialog
  */
 Blockly.Css.register(`
+
+/* ── Shared dialog design tokens ───────────────────────────────────────────
+   Primary:  #4F46E5  (indigo-600, contrast 5.7:1 on white — passes WCAG AA)
+   Focus:    #ffa200  (amber, retained from project convention)
+   Text:     #1F2937 / #4B5563
+   Border:   #E5E7EB
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* Backdrop */
+.settings-modal::backdrop {
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(3px);
+}
+
+/* Dialog shell */
 .settings-modal {
-  border: 1px solid var(--shortcut-modal-border-color, #9aa0a6);
-  border-radius: 12px;
-  box-shadow: 6px 6px 32px rgba(0,0,0,.5);
-  flex-direction: column;
-  gap: 12px;
+  border: none;
+  border-top: 4px solid #4F46E5;
+  border-radius: 16px;
+  box-shadow: 0 8px 40px rgba(79, 70, 229, 0.15), 0 2px 8px rgba(0,0,0,0.08);
+  padding: 0;
+  background: #ffffff;
+  max-height: 85vh;
+  max-width: 520px;
+  width: calc(100% - 48px);
   margin: auto;
-  max-height: 82vh;
-  max-width: calc(100% - 10em);
-  padding: 24px;
-  position: relative;
-  z-index: 99;
-  background: white;
+  display: none;
+  flex-direction: column;
 }
 
 .settings-modal[open] {
   display: flex;
 }
 
-.settings-modal .close-modal {
-  border: 0;
-  background: transparent;
-  float: inline-end;
-  margin: 0;
-  position: absolute;
-  top: 16px;
-  right: 24px;
-  cursor: pointer;
-}
-
-.settings-modal h1 {
-  font-weight: 600;
-  font-size: 1.2em;
-  margin: 0 0 20px 0;
-}
-
+/* Inner wrapper */
 .settings-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  outline: none;
   font-size: 0.95em;
-  padding: 0.5em;
 }
 
+/* ── Header ── */
+.dialog-header {
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid #E5E7EB;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.dialog-header h1 {
+  font-size: 1.2em;
+  font-weight: 700;
+  color: #1F2937;
+  margin: 0 40px 4px 0;
+}
+
+.dialog-subtitle {
+  font-size: 0.875em;
+  color: #4B5563;
+  margin: 0;
+}
+
+/* Close button — 36×36 touch-friendly */
+.close-modal {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  width: 36px;
+  height: 36px;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6B7280;
+  padding: 0;
+}
+
+.close-modal:hover {
+  background: #EEF2FF;
+  border-color: #4F46E5;
+  color: #4F46E5;
+}
+
+.close-modal:focus {
+  outline: 3px solid #ffa200;
+  outline-offset: 2px;
+}
+
+/* ── Scrollable content ── */
 .settings-content {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  padding: 20px 24px;
+  overflow-y: auto;
+  flex: 1;
 }
 
 .setting-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .setting-group label {
-  font-weight: 500;
-  font-size: 1em;
+  font-weight: 600;
+  font-size: 0.95em;
+  color: #1F2937;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
+/* Live value badge next to slider label */
+.setting-value {
+  background: #EEF2FF;
+  color: #4F46E5;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.875em;
+}
+
+.setting-description {
+  font-size: 0.85em;
+  color: #4B5563;
+  margin: 0;
+}
+
+/* Sliders — accent-color tints the thumb and track in modern browsers */
 .setting-group input[type="range"] {
   width: 100%;
   height: 6px;
   border-radius: 3px;
-  background: #ddd;
-  outline: none;
+  accent-color: #4F46E5;
+  cursor: pointer;
 }
 
 .setting-group input[type="range"]:focus {
   outline: 3px solid #ffa200;
+  outline-offset: 4px;
+  border-radius: 3px;
 }
 
+/* Voice select — min-height satisfies WCAG 2.5.8 target size */
 .setting-group select {
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 1em;
+  padding: 10px 12px;
+  border: 2px solid #E5E7EB;
+  border-radius: 10px;
+  font-size: 0.95em;
+  color: #1F2937;
+  background: #ffffff;
+  min-height: 44px;
+  cursor: pointer;
+  font-family: inherit;
+  width: 100%;
+}
+
+.setting-group select:hover {
+  border-color: #4F46E5;
 }
 
 .setting-group select:focus {
   outline: 3px solid #ffa200;
-  border-color: #ffa200;
+  outline-offset: 2px;
+  border-color: #4F46E5;
 }
 
-.setting-description {
-  font-size: 0.9em;
-  color: #666;
-  font-style: italic;
-}
-
-.action-buttons {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
-  flex-wrap: wrap;
-  margin-top: 20px;
-}
-
-.action-buttons button {
-  padding: 10px 16px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.95em;
-  min-width: 120px;
-}
-
-.test-button {
-  background: #e3f2fd;
-  border-color: #2196f3;
-}
-
-.test-button:hover, .test-button:focus {
-  background: #bbdefb;
-  outline: 2px solid #ffa200;
-}
-
-.reset-button {
-  background: #fff3e0;
-  border-color: #ff9800;
-}
-
-.reset-button:hover, .reset-button:focus {
-  background: #ffe0b2;
-  outline: 2px solid #ffa200;
-}
-
-.save-button {
-  background: #e8f5e8;
-  border-color: #4caf50;
-}
-
-.save-button:hover, .save-button:focus {
-  background: #c8e6c9;
-  outline: 2px solid #ffa200;
-}
-
-.cancel-button {
-  background: #ffebee;
-  border-color: #f44336;
-}
-
-.cancel-button:hover, .cancel-button:focus {
-  background: #ffcdd2;
-  outline: 2px solid #ffa200;
-}
-
-/* Add this to your existing Blockly.Css.register section */
-
-/* Simple dropdown styles */
-.simple-dropdown {
-  position: relative;
-  width: 100%;
-}
-
-.dropdown-button {
-  width: 100%;
-  padding: 8px 12px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  background: white;
-  cursor: pointer;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 1em;
-  text-align: left;
-}
-
-.dropdown-button:hover {
-  border-color: #999;
-}
-
-.dropdown-button:focus {
-  outline: 3px solid #ffa200;
-  border-color: #ffa200;
-}
-
-.selected-text {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.dropdown-arrow {
-  margin-left: 8px;
-  user-select: none;
-  font-size: 0.8em;
-}
-
-.dropdown-listbox {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  max-height: 200px;
-  overflow-y: auto;
-  background: white;
-  border: 1px solid #ffa200;
-  border-top: none;
-  border-radius: 0 0 4px 4px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  z-index: 1000;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.dropdown-listbox li {
-  padding: 8px 12px;
-  cursor: pointer;
-  border-bottom: 1px solid #eee;
-  user-select: none;
-}
-
-.dropdown-listbox li:last-child {
-  border-bottom: none;
-}
-
-.dropdown-listbox li:hover,
-.dropdown-listbox li.selected {
-  background-color: #e3f2fd;
-}
-
-.dropdown-listbox li.selected {
-  background-color: #bbdefb;
-  font-weight: 500;
-}
-  /* Checkbox styling */
+/* Checkbox */
 .checkbox-label {
   display: flex;
   align-items: center;
+  gap: 10px;
   cursor: pointer;
-  font-weight: 500;
-  font-size: 1em;
+  font-weight: 600;
+  color: #1F2937;
+  justify-content: flex-start;
 }
 
 .checkbox-label input[type="checkbox"] {
-  margin-right: 8px;
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   cursor: pointer;
+  accent-color: #4F46E5;
+  flex-shrink: 0;
 }
 
 .checkbox-label input[type="checkbox"]:focus {
@@ -870,7 +822,101 @@ Blockly.Css.register(`
   user-select: none;
 }
 
-.checkbox-label:hover .checkbox-text {
-  color: #333;
+/* ── Footer with action buttons ── */
+.dialog-footer {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  padding: 16px 24px;
+  border-top: 1px solid #E5E7EB;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+/* ── Button system ── */
+.dialog-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-size: 0.9em;
+  font-weight: 600;
+  cursor: pointer;
+  border: 2px solid transparent;
+  font-family: inherit;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.dialog-btn:focus {
+  outline: 3px solid #ffa200;
+  outline-offset: 2px;
+}
+
+/* Primary — filled indigo */
+.dialog-btn-primary {
+  background: #4F46E5;
+  color: #ffffff;
+  border-color: #4F46E5;
+}
+
+.dialog-btn-primary:hover {
+  background: #4338CA;
+  border-color: #4338CA;
+}
+
+/* Secondary — outlined indigo */
+.dialog-btn-secondary {
+  background: #ffffff;
+  color: #4F46E5;
+  border-color: #4F46E5;
+}
+
+.dialog-btn-secondary:hover {
+  background: #EEF2FF;
+}
+
+/* Ghost — subtle gray, for low-emphasis actions */
+.dialog-btn-ghost {
+  background: #ffffff;
+  color: #4B5563;
+  border-color: #D1D5DB;
+}
+
+.dialog-btn-ghost:hover {
+  background: #F9FAFB;
+  border-color: #9CA3AF;
+  color: #1F2937;
+}
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  .settings-modal {
+    width: calc(100% - 24px);
+    max-height: 92vh;
+  }
+
+  .dialog-footer {
+    justify-content: stretch;
+  }
+
+  .dialog-btn {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+/* ── High-contrast mode ── */
+@media (prefers-contrast: high) {
+  .settings-modal {
+    border: 3px solid #000;
+    border-top: 6px solid #4F46E5;
+  }
+
+  .close-modal,
+  .dialog-btn {
+    border-width: 3px;
+  }
 }
 `);
