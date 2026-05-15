@@ -268,11 +268,8 @@
       const helpButton = document.getElementById('help-button');
       if (helpButton) {
         helpButton.addEventListener('click', () => {
-          if (window.accessibilityDemo && window.accessibilityDemo.getHelpDialog) {
-            const helpDialog = window.accessibilityDemo.getHelpDialog();
-            if (helpDialog && helpDialog.toggle) {
-              helpDialog.toggle();
-            }
+          if (window.helpDialog && window.helpDialog.toggle) {
+            window.helpDialog.toggle();
           } else {
             console.warn('Help dialog not available yet');
           }
