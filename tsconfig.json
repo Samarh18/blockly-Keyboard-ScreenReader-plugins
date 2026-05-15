@@ -8,6 +8,7 @@
     "module": "es2015",
     "moduleResolution": "bundler",
     "target": "es6",
+    "lib": ["es2019", "dom", "dom.iterable"],
     "strict": true
   },
   // NOTE: `test/**/*` is automatically included in `blockly-scripts start`.
