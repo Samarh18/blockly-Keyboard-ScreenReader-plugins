@@ -64,6 +64,8 @@ export class ScreenReader {
   // -------------------------------------------------------------------------
   private lastAnnouncedBlockId: string | null = null;
   private lastWorkspaceNodeId: string | null = null;
+  private lastSelectedBlockId: string | null = null;
+  private lastSelectedAnnouncementTime: number = 0;
   private hasLeftWorkspace: boolean = false;
   private cursorInterval: number | null = null;
 
@@ -873,12 +875,28 @@ export class ScreenReader {
           const block = this.workspace.getBlockById(selectedEvent.newElementId);
           if (block) {
             this.announceBlock(block);
-            // Prevent the cursor polling interval from announcing the same block
-            // a second time when it detects the cursor moved to this block.
+            // Prevent the cursor polling interval from re-announcing this block.
             this.lastWorkspaceNodeId = `block-${block.id}`;
+            // Record so the CLICK handler below knows SELECTED just fired.
+            this.lastSelectedBlockId = block.id;
+            this.lastSelectedAnnouncementTime = Date.now();
           }
         } else {
           this.speak("No block selected");
+        }
+      } else if (event.type === Blockly.Events.CLICK) {
+        const clickEvent = event as Blockly.Events.Click;
+        if (clickEvent.targetType === 'block' && clickEvent.blockId) {
+          const block = this.workspace.getBlockById(clickEvent.blockId);
+          if (block) {
+            // SELECTED fires alongside CLICK when selecting a new block — skip
+            // to avoid double-announcing. But if SELECTED didn't fire (re-click
+            // of already-selected block), announce so the user gets feedback.
+            const timeSinceSelected = Date.now() - this.lastSelectedAnnouncementTime;
+            if (!(this.lastSelectedBlockId === block.id && timeSinceSelected < 200)) {
+              this.announceBlock(block);
+            }
+          }
         }
       } else if (event.type === Blockly.Events.BLOCK_CREATE) {
         const createEvent = event as Blockly.Events.BlockCreate;
